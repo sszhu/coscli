@@ -44,7 +44,18 @@ uv pip install -e .
 - uv package manager
 - Tencent Cloud Account with COS access
 
-**📖 More details**: [docs/UV_GUIDE.md](docs/UV_GUIDE.md)
+### Troubleshooting Installation
+
+If you encounter SSL certificate errors during installation (common in corporate networks):
+
+```bash
+# The install.sh script handles this automatically, but if needed:
+curl -LsSfk https://astral.sh/uv/install.sh | sh
+```
+
+**📖 More details**: 
+- [docs/UV_GUIDE.md](docs/UV_GUIDE.md)
+- [docs/SSL_TROUBLESHOOTING.md](docs/SSL_TROUBLESHOOTING.md) - SSL certificate issues
 
 ## Quick Start
 

@@ -19,7 +19,13 @@ echo "✓ Python $(python3 --version 2>&1 | awk '{print $2}')"
 # Install uv if needed
 if ! command -v uv &> /dev/null; then
     echo "⬇️  Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    
+    # Try with SSL verification first
+    if ! curl -LsSf https://astral.sh/uv/install.sh | sh 2>/dev/null; then
+        echo "⚠️  SSL certificate error detected, retrying with --insecure..."
+        curl -LsSfk https://astral.sh/uv/install.sh | sh
+    fi
+    
     source "$HOME/.cargo/env" 2>/dev/null || true
     
     if ! command -v uv &> /dev/null; then
