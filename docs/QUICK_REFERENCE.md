@@ -95,6 +95,82 @@ cos rm cos://bucket/folder/ --recursive
 cos rm cos://bucket/folder/ --recursive --dryrun
 ```
 
+### Move/Rename Objects
+```bash
+# Rename single object
+cos mv cos://bucket/old-name.txt cos://bucket/new-name.txt
+
+# Move directory
+cos mv cos://bucket/old-folder/ cos://bucket/new-folder/ --recursive
+
+# Move between buckets
+cos mv cos://bucket1/file.txt cos://bucket2/file.txt
+
+# Move with confirmation
+cos mv cos://bucket/source/ cos://bucket/dest/ --recursive
+```
+
+### Synchronize Directories
+```bash
+# Sync local to COS (upload changed files)
+cos sync ./local-dir/ cos://bucket/remote-dir/
+
+# Sync COS to local (download)
+cos sync cos://bucket/remote-dir/ ./local-dir/
+
+# Sync with delete (exact mirror)
+cos sync ./local-dir/ cos://bucket/remote-dir/ --delete
+
+# Preview changes without execution
+cos sync ./local-dir/ cos://bucket/remote-dir/ --dryrun
+
+# Fast sync (compare by size only, skip time check)
+cos sync ./local-dir/ cos://bucket/remote-dir/ --size-only
+
+# Combine options
+cos sync ./local-dir/ cos://bucket/backup/ --delete --size-only
+```
+
+### Generate Presigned URLs
+```bash
+# Generate download URL (default 1 hour)
+cos presign cos://bucket/file.txt
+
+# Custom expiration (2 hours = 7200 seconds)
+cos presign cos://bucket/file.txt --expires-in 7200
+
+# Short-lived URL (5 minutes)
+cos presign cos://bucket/file.txt -e 300
+
+# Long-lived URL (7 days, maximum)
+cos presign cos://bucket/file.txt -e 604800
+
+# Generate upload URL
+cos presign cos://bucket/file.txt --method PUT
+
+# Generate delete URL
+cos presign cos://bucket/file.txt --method DELETE
+```
+
+### Token Management
+```bash
+# Generate temporary credentials (default 2 hours)
+cos token
+
+# Custom duration (8 hours)
+cos token --duration 28800
+
+# Output as environment variables
+cos token --output env > temp_creds.sh
+source temp_creds.sh
+
+# JSON format
+cos token --output json
+
+# Import token directly into config
+cos configure import-token
+```
+
 ### Bucket Management
 ```bash
 # Create bucket
@@ -209,13 +285,30 @@ cos rm cos://bucket/temp/ --recursive --dryrun
 cos rm cos://bucket/temp/ --recursive
 ```
 
-### Sync-like Operation
+### Sync Operation
 ```bash
-# Upload only if changed (manual sync)
-find ./local/ -type f -newer .last-sync | while read file; do
-  cos cp "$file" cos://bucket/"${file#./local/}"
-done
-touch .last-sync
+# Sync directory (proper bidirectional sync)
+cos sync ./local/ cos://bucket/backup/
+
+# Preview sync changes
+cos sync ./local/ cos://bucket/backup/ --dryrun
+
+# Exact mirror (delete extra files)
+cos sync ./local/ cos://bucket/backup/ --delete
+```
+
+### Share Files with Presigned URLs
+```bash
+# Generate shareable link
+URL=$(cos presign cos://bucket/document.pdf --expires-in 86400)
+echo "Share this link: $URL"
+
+# Download with curl
+cos presign cos://bucket/file.txt | xargs curl -O
+
+# Upload with presigned URL
+UPLOAD_URL=$(cos presign cos://bucket/new-file.txt --method PUT)
+curl -X PUT -T local-file.txt "$UPLOAD_URL"
 ```
 
 ### List with Filtering

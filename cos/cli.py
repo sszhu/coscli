@@ -3,7 +3,7 @@
 import click
 
 from .config import ConfigManager
-from .commands import configure, ls, cp, rm, mb, rb, token
+from .commands import configure, ls, cp, rm, mb, rb, token, mv, presign, sync
 from . import __version__
 
 
@@ -48,9 +48,12 @@ def cli(ctx, profile, region, output, endpoint_url, no_verify_ssl, debug, quiet)
 cli.add_command(configure.configure)
 cli.add_command(ls.ls)
 cli.add_command(cp.cp)
+cli.add_command(mv.mv)
 cli.add_command(rm.rm)
+cli.add_command(sync.sync)
 cli.add_command(mb.mb)
 cli.add_command(rb.rb)
+cli.add_command(presign.presign)
 cli.add_command(token.token)
 
 

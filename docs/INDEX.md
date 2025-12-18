@@ -13,9 +13,9 @@ Welcome to the COS CLI documentation! This index will help you find the informat
    - Feature summary
    - Success metrics
 
-2. **[README.md](README.md)** - User Guide
+2. **[README.md](../README.md)** - User Guide
    - Installation instructions
-   - Complete command reference
+   - Complete command reference (10 commands)
    - Configuration guide
    - Examples and use cases
 
@@ -31,32 +31,56 @@ Welcome to the COS CLI documentation! This index will help you find the informat
    - Tips and tricks
    - Troubleshooting
 
+5. **[TOKEN_MANAGEMENT.md](TOKEN_MANAGEMENT.md)** - Token Guide 🆕
+   - Generate temporary credentials
+   - Import tokens into configuration
+   - Duration limits and validation
+   - Security best practices
+
+6. **[SSL_TROUBLESHOOTING.md](SSL_TROUBLESHOOTING.md)** - SSL Issues 🆕
+   - Corporate network SSL certificates
+   - Diagnostic tools
+   - Solutions and workarounds
+   - Installation fixes
+
 ### For Developers
-4. **[COS_CLI_DEVELOPMENT_PLAN.md](COS_CLI_DEVELOPMENT_PLAN.md)** - Implementation Plan
+7. **[COS_CLI_DEVELOPMENT_PLAN.md](COS_CLI_DEVELOPMENT_PLAN.md)** - Implementation Plan
    - Comprehensive development roadmap
    - Architecture details
    - Phase-by-phase implementation
    - Future enhancements
 
-5. **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Technical Overview
+8. **[PROJECT_SUMMARY.md](PROJECT_SUMMARY.md)** - Technical Overview
    - Project structure
    - Implementation details
    - Migration notes
    - Comparison with original
 
-### Migration & Updates
-6. **[MIGRATION_TO_UV.md](MIGRATION_TO_UV.md)** - uv Migration Guide 🆕
-   - What changed
-   - Why uv
-   - Installation options
-   - Backward compatibility
+9. **[IMPLEMENTATION_SUMMARY.md](IMPLEMENTATION_SUMMARY.md)** - Phase 2 Implementation 🆕
+   - mv, presign, sync commands
+   - Integration work
+   - Testing summary
+   - Next steps
 
-### Version History
-7. **[CHANGELOG.md](CHANGELOG.md)** - Version History
-   - Release notes
-   - Feature additions
-   - Bug fixes
-   - Planned features
+### Version & Release Information
+10. **[RELEASE_NOTES_1.1.0.md](RELEASE_NOTES_1.1.0.md)** - Latest Release 🆕
+    - New features (mv, sync, presign)
+    - Use cases and examples
+    - Performance benchmarks
+    - Upgrade instructions
+
+11. **[CHANGELOG.md](../CHANGELOG.md)** - Version History
+    - Release notes
+    - Feature additions
+    - Bug fixes
+    - Breaking changes
+
+### Migration & Updates
+12. **[MIGRATION_TO_UV.md](MIGRATION_TO_UV.md)** - uv Migration Guide
+    - What changed
+    - Why uv
+    - Installation options
+    - Backward compatibility
 
 ---
 

@@ -148,6 +148,51 @@ cos rm cos://my-bucket/file.txt
 cos rm cos://my-bucket/folder/ --recursive
 ```
 
+#### Move/Rename Objects
+```bash
+# Rename object
+cos mv cos://bucket/old-name.txt cos://bucket/new-name.txt
+
+# Move directory
+cos mv cos://bucket/old-folder/ cos://bucket/new-folder/ --recursive
+
+# Move between buckets
+cos mv cos://bucket1/file.txt cos://bucket2/file.txt
+```
+
+#### Synchronize Directories
+```bash
+# Sync local to COS (upload)
+cos sync ./local-dir/ cos://bucket/remote-dir/
+
+# Sync COS to local (download)
+cos sync cos://bucket/remote-dir/ ./local-dir/
+
+# Sync with delete (exact mirror)
+cos sync ./local-dir/ cos://bucket/remote-dir/ --delete
+
+# Preview sync without making changes
+cos sync ./local-dir/ cos://bucket/remote-dir/ --dryrun
+
+# Fast sync (compare by size only)
+cos sync ./local-dir/ cos://bucket/remote-dir/ --size-only
+```
+
+#### Generate Presigned URLs
+```bash
+# Generate URL for download (default 1 hour)
+cos presign cos://bucket/file.txt
+
+# Custom expiration (2 hours)
+cos presign cos://bucket/file.txt --expires-in 7200
+
+# Generate upload URL
+cos presign cos://bucket/file.txt --method PUT
+
+# Generate short-lived URL (5 minutes)
+cos presign cos://bucket/file.txt -e 300
+```
+
 #### Create/Delete Buckets
 ```bash
 # Create bucket
@@ -296,9 +341,13 @@ export COS_PROFILE=production
 | `configure` | Configure COS CLI settings |
 | `ls` | List buckets or objects |
 | `cp` | Copy files to/from/within COS |
+| `mv` | Move or rename objects |
+| `sync` | Synchronize directories between local and COS |
 | `rm` | Remove objects |
 | `mb` | Make (create) bucket |
 | `rb` | Remove bucket |
+| `presign` | Generate presigned URLs for temporary access |
+| `token` | Generate temporary STS credentials |
 
 ## Examples
 
@@ -314,12 +363,23 @@ cos ls cos://bucket/logs/ --output text | tail -5 | while read file; do
 done
 ```
 
-### Sync Directory (one-way)
+### Sync Directory
 ```bash
 # Upload only changed files
-for file in $(find ./local-dir -type f); do
-  cos cp $file cos://bucket/${file#./local-dir/}
-done
+cos sync ./local-dir/ cos://bucket/backup/ --size-only
+
+# Exact mirror (delete files not in source)
+cos sync ./local-dir/ cos://bucket/backup/ --delete
+```
+
+### Share Files with Presigned URLs
+```bash
+# Generate a download link valid for 24 hours
+cos presign cos://bucket/document.pdf --expires-in 86400
+
+# Share via curl
+URL=$(cos presign cos://bucket/file.txt)
+echo "Download: $URL"
 ```
 
 ### Bulk Delete Old Files

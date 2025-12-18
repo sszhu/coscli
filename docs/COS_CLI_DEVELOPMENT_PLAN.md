@@ -115,7 +115,7 @@ output = table
 [default]
 secret_id = AKID...
 secret_key = BB0d2EE5...
-assume_role = qcs::cam::uin/100013805939:roleName/...
+assume_role = qcs::cam::uin/**:roleName/...
 
 [profile production]
 secret_id = AKID...
@@ -468,8 +468,8 @@ pip install tencentcloud-cos-cli
 
 **From Source:**
 ```bash
-git clone https://github.com/yourorg/cos-cli.git
-cd cos-cli
+git clone https://github.com/sszhu/coscli.git
+cd coscli
 pip install -e .
 ```
 
@@ -529,33 +529,37 @@ cos logs disable cos://bucket
 
 ## Implementation Checklist
 
-### MVP (Target: 4 weeks)
-- [ ] Project structure setup
-- [ ] Configuration management (`configure` command)
-- [ ] Authentication with STS token caching
-- [ ] CLI framework with global options
-- [ ] Command: `cos ls`
-- [ ] Command: `cos cp` (basic upload/download)
-- [ ] Command: `cos rm`
-- [ ] Command: `cos mb`
-- [ ] Command: `cos rb`
-- [ ] Progress bars for file transfers
-- [ ] Basic error handling
-- [ ] Output formatting (table, json, text)
-- [ ] Unit tests for core functionality
-- [ ] README with usage examples
+### MVP (Target: 4 weeks) ✅ COMPLETED
+- [x] Project structure setup
+- [x] Configuration management (`configure` command)
+- [x] Authentication with STS token caching
+- [x] CLI framework with global options
+- [x] Command: `cos ls`
+- [x] Command: `cos cp` (basic upload/download)
+- [x] Command: `cos rm`
+- [x] Command: `cos mb`
+- [x] Command: `cos rb`
+- [x] Command: `cos token` (generate temporary credentials)
+- [x] Progress bars for file transfers
+- [x] Basic error handling
+- [x] Output formatting (table, json, text)
+- [x] Unit tests for core functionality
+- [x] README with usage examples
+- [x] SSL certificate troubleshooting
+- [x] Modern packaging (pyproject.toml with uv)
 
-### V1.0 (Target: 8 weeks)
-- [ ] Command: `cos mv`
-- [ ] Command: `cos sync` (basic)
-- [ ] Command: `cos presign`
-- [ ] Multipart upload support
+### V1.0 (Target: 8 weeks) 🚧 IN PROGRESS
+- [x] Multipart upload support
+- [x] Recursive operations
+- [x] Enhanced error handling
+- [x] Complete documentation
+- [x] Modern package management (uv)
+- [x] Command: `cos mv` - ✅ COMPLETED
+- [x] Command: `cos sync` (basic) - ✅ COMPLETED
+- [x] Command: `cos presign` - ✅ COMPLETED
 - [ ] Parallel file transfers
 - [ ] Include/exclude patterns
-- [ ] Recursive operations
-- [ ] Enhanced error handling
 - [ ] Integration tests
-- [ ] Complete documentation
 - [ ] Package for PyPI
 
 ### V2.0 (Target: 12 weeks)
