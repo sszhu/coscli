@@ -13,7 +13,7 @@ A powerful command-line interface for Tencent Cloud Object Storage (COS), design
 
 ## Installation
 
-### Quick Install
+### Quick Install (with new venv)
 ```bash
 ./install.sh
 ```
@@ -23,10 +23,18 @@ This will:
 2. Create a virtual environment
 3. Install COS CLI and dependencies
 
-### Activate Environment
+Then activate:
 ```bash
 source .venv/bin/activate
 ```
+
+### Install in Current Environment
+If you're already in a conda environment or existing venv:
+```bash
+./install.sh --current
+```
+
+This installs COS CLI in your current Python environment without creating a new venv
 
 ### Manual Installation
 ```bash
