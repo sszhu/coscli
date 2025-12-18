@@ -66,12 +66,13 @@ def get_cos_files(cos_client, prefix=""):
 def sync(ctx, source, destination, delete, dryrun, size_only):
     """
     Synchronize directories between local and COS.
-    
+
+    \b
     Examples:
-        cos sync ./local/ cos://bucket/path/        # Upload local to COS
-        cos sync cos://bucket/path/ ./local/        # Download COS to local
-        cos sync ./local/ cos://bucket/ --delete    # Sync and delete extras
-        cos sync ./local/ cos://bucket/ --dryrun    # Preview changes
+      cos sync ./local/ cos://bucket/path/        # Upload local to COS
+      cos sync cos://bucket/path/ ./local/        # Download COS to local
+      cos sync ./local/ cos://bucket/ --delete    # Sync and delete extras
+      cos sync ./local/ cos://bucket/ --dryrun    # Preview changes
     """
     try:
         # Determine sync direction

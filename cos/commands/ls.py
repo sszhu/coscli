@@ -25,12 +25,13 @@ from ..exceptions import COSError
 def ls(ctx, path, recursive, human_readable):
     """
     List buckets or objects.
-    
+
+    \b
     Examples:
-        cos ls                          # List all buckets
-        cos ls cos://bucket/            # List objects in bucket
-        cos ls cos://bucket/prefix/     # List with prefix
-        cos ls cos://bucket/ -r         # Recursive listing
+      cos ls                        # List all buckets
+      cos ls cos://bucket/          # List objects in bucket
+      cos ls cos://bucket/prefix/   # List with prefix
+      cos ls cos://bucket/ -r       # Recursive listing
     """
     try:
         # Get config and auth

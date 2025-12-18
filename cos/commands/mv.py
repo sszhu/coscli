@@ -25,11 +25,12 @@ from ..exceptions import COSError
 def mv(ctx, source, destination, recursive, force):
     """
     Move or rename objects.
-    
+
+    \b
     Examples:
-        cos mv cos://bucket/old.txt cos://bucket/new.txt       # Rename
-        cos mv cos://bucket/dir/ cos://bucket/newdir/ -r       # Move directory
-        cos mv cos://bucket1/file cos://bucket2/file           # Move between buckets
+      cos mv cos://bucket/old.txt cos://bucket/new.txt       # Rename
+      cos mv cos://bucket/dir/ cos://bucket/newdir/ -r       # Move directory
+      cos mv cos://bucket1/file cos://bucket2/file           # Move between buckets
     """
     try:
         # Validate URIs

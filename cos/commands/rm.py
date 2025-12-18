@@ -20,11 +20,12 @@ from ..exceptions import COSError
 def rm(ctx, path, recursive, include, exclude, dryrun):
     """
     Remove objects from COS.
-    
+
+    \b
     Examples:
-        cos rm cos://bucket/file.txt        # Remove single object
-        cos rm cos://bucket/path/ -r        # Remove all objects with prefix
-        cos rm cos://bucket/ -r --dryrun    # Show what would be deleted
+      cos rm cos://bucket/file.txt        # Remove single object
+      cos rm cos://bucket/path/ -r        # Remove all objects with prefix
+      cos rm cos://bucket/ -r --dryrun    # Show what would be deleted
     """
     try:
         if not is_cos_uri(path):

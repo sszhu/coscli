@@ -20,16 +20,17 @@ from . import __version__
 def cli(ctx, profile, region, output, endpoint_url, no_verify_ssl, debug, quiet):
     """
     Tencent Cloud Object Storage (COS) Command Line Interface
-    
+
     A powerful CLI tool for managing Tencent COS, similar to AWS CLI.
-    
+
+    \b
     Examples:
-        cos configure                           # Setup credentials
-        cos ls                                  # List buckets
-        cos ls cos://bucket/                    # List objects
-        cos cp file.txt cos://bucket/file.txt   # Upload file
-        cos cp cos://bucket/file.txt ./local    # Download file
-        cos rm cos://bucket/file.txt            # Delete object
+      cos configure                           # Setup credentials
+      cos ls                                  # List buckets
+      cos ls cos://bucket/                    # List objects
+      cos cp file.txt cos://bucket/file.txt   # Upload file
+      cos cp cos://bucket/file.txt ./local    # Download file
+      cos rm cos://bucket/file.txt            # Delete object
     """
     # Ensure context object exists
     ctx.ensure_object(dict)

@@ -24,14 +24,15 @@ from ..exceptions import COSError
 def presign(ctx, cos_uri, expires_in, method):
     """
     Generate presigned URLs for COS objects.
-    
+
     Presigned URLs allow temporary access to objects without credentials.
-    
+
+    \b
     Examples:
-        cos presign cos://bucket/file.txt                    # Default 1-hour GET URL
-        cos presign cos://bucket/file.txt --expires-in 7200  # 2-hour URL
-        cos presign cos://bucket/file.txt --method PUT       # Upload URL
-        cos presign cos://bucket/file.txt -e 300            # 5-minute URL
+      cos presign cos://bucket/file.txt                    # Default 1-hour GET URL
+      cos presign cos://bucket/file.txt --expires-in 7200  # 2-hour URL
+      cos presign cos://bucket/file.txt --method PUT       # Upload URL
+      cos presign cos://bucket/file.txt -e 300            # 5-minute URL
     """
     try:
         # Validate URI

@@ -17,12 +17,13 @@ from ..utils import success_message, error_message, info_message, format_output
 def token(ctx, duration, profile, output):
     """
     Generate temporary STS credentials for testing.
-    
+
+    \b
     Examples:
-        cos token                    # Generate token with default duration
-        cos token --duration 3600    # Generate 1-hour token
-        cos token --output env       # Output as environment variables
-        cos token --output json      # Output as JSON
+      cos token                    # Generate token with default duration
+      cos token --duration 3600    # Generate 1-hour token
+      cos token --output env       # Output as environment variables
+      cos token --output json      # Output as JSON
     """
     try:
         # Get config

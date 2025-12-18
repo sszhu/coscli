@@ -16,10 +16,11 @@ from ..exceptions import COSError
 def rb(ctx, bucket, force):
     """
     Remove a bucket.
-    
+
+    \b
     Examples:
-        cos rb cos://my-bucket          # Remove empty bucket
-        cos rb cos://my-bucket --force  # Remove bucket and all contents
+      cos rb cos://my-bucket          # Remove empty bucket
+      cos rb cos://my-bucket --force  # Remove bucket and all contents
     """
     try:
         if not is_cos_uri(bucket):

@@ -16,10 +16,11 @@ from ..exceptions import COSError
 def mb(ctx, bucket, region):
     """
     Create a new bucket.
-    
+
+    \b
     Examples:
-        cos mb cos://my-new-bucket
-        cos mb cos://my-new-bucket --region ap-beijing
+      cos mb cos://my-new-bucket
+      cos mb cos://my-new-bucket --region ap-beijing
     """
     try:
         if not is_cos_uri(bucket):

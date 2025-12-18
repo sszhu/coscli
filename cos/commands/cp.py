@@ -37,12 +37,13 @@ from ..exceptions import COSError
 def cp(ctx, source, destination, recursive, include, exclude, no_progress):
     """
     Copy files to/from COS.
-    
+
+    \b
     Examples:
-        cos cp file.txt cos://bucket/file.txt       # Upload
-        cos cp cos://bucket/file.txt ./local.txt    # Download
-        cos cp cos://b1/f cos://b2/f                # Copy between buckets
-        cos cp ./dir/ cos://bucket/dir/ -r          # Upload directory
+      cos cp file.txt cos://bucket/file.txt       # Upload
+      cos cp cos://bucket/file.txt ./local.txt    # Download
+      cos cp cos://b1/f cos://b2/f                # Copy between buckets
+      cos cp ./dir/ cos://bucket/dir/ -r          # Upload directory
     """
     try:
         # Get config and auth
