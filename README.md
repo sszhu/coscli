@@ -61,9 +61,15 @@ If you encounter SSL certificate errors during installation (common in corporate
 curl -LsSfk https://astral.sh/uv/install.sh | sh
 ```
 
+**SSL Certificate Issues?**
+```bash
+# Run diagnostic tool to identify the issue
+python diagnose_ssl.py
+```
+
 **📖 More details**: 
 - [docs/UV_GUIDE.md](docs/UV_GUIDE.md)
-- [docs/SSL_TROUBLESHOOTING.md](docs/SSL_TROUBLESHOOTING.md) - SSL certificate issues
+- [docs/SSL_TROUBLESHOOTING.md](docs/SSL_TROUBLESHOOTING.md) - Comprehensive SSL troubleshooting
 
 ## Quick Start
 

@@ -80,28 +80,125 @@ SSLError(SSLCertVerificationError(1, '[SSL: CERTIFICATE_VERIFY_FAILED]
 certificate verify failed: self-signed certificate in certificate chain')))
 ```
 
-### Solution: Already Handled!
+### Understanding the Issue
+
+This error occurs when:
+1. **Corporate SSL Inspection**: Your company's network intercepts HTTPS traffic and re-signs certificates with an internal CA
+2. **Missing CA Certificates**: Python doesn't trust the corporate CA certificate
+3. **Outdated certifi Package**: The Python certificate bundle is outdated
+
+### Solution A: COS CLI Built-in SSL Bypass (Automatic)
 
 COS CLI v1.0.2+ automatically disables SSL verification for Tencent Cloud APIs. This is configured in `cos/auth.py` and should work out of the box.
 
-**If you still see this error:**
+**If you still see this error, ensure you have the latest version:**
 
-1. **Ensure you have the latest version:**
-   ```bash
-   cd /path/to/coscli
-   git pull origin main
-   
-   # Reinstall
-   source .venv/bin/activate
-   pip install -e . --force-reinstall
-   ```
+```bash
+cd /path/to/coscli
+git pull origin main
 
-2. **Verify the auth.py patch is present:**
-   ```bash
-   grep -A 5 "patched_request" cos/auth.py
-   ```
-   
-   You should see the SSL verification bypass code.
+# Reinstall
+source .venv/bin/activate
+pip install -e . --force-reinstall --no-cache-dir
+```
+
+**Verify the SSL bypass is active:**
+```bash
+grep -A 5 "patched_request" cos/auth.py
+```
+
+You should see the SSL verification bypass code.
+
+### Solution B: Install Corporate CA Certificates (Recommended for Production)
+
+If automatic bypass doesn't work, install your corporate CA certificate:
+
+#### Step 1: Locate Your Corporate CA Certificate
+
+**On macOS:**
+```bash
+# Export from Keychain
+security find-certificate -a -p \
+  /System/Library/Keychains/SystemRootCertificates.keychain > ~/corporate-ca.crt
+security find-certificate -a -p \
+  /Library/Keychains/System.keychain >> ~/corporate-ca.crt
+```
+
+**On Linux:**
+```bash
+# Usually located at:
+# - /etc/ssl/certs/ca-certificates.crt (Debian/Ubuntu)
+# - /etc/pki/tls/certs/ca-bundle.crt (RedHat/CentOS)
+# - Contact your IT department for corporate CA
+
+# Create bundle with system + corporate CA
+cat /etc/ssl/certs/ca-certificates.crt > ~/ca-bundle.crt
+cat /path/to/corporate-ca.crt >> ~/ca-bundle.crt
+```
+
+**On Windows:**
+```powershell
+# Contact your IT department for the corporate CA certificate
+# Usually named something like: CompanyName-Root-CA.crt
+```
+
+#### Step 2: Configure Python to Use CA Bundle
+
+**Option A: Environment Variables (Temporary)**
+```bash
+export REQUESTS_CA_BUNDLE=~/ca-bundle.crt
+export SSL_CERT_FILE=~/ca-bundle.crt
+export CURL_CA_BUNDLE=~/ca-bundle.crt
+
+# Then run cos CLI
+cos ls
+```
+
+**Option B: Add to Shell Profile (Permanent)**
+```bash
+# Add to ~/.bashrc or ~/.zshrc
+echo 'export REQUESTS_CA_BUNDLE=~/ca-bundle.crt' >> ~/.bashrc
+echo 'export SSL_CERT_FILE=~/ca-bundle.crt' >> ~/.bashrc
+echo 'export CURL_CA_BUNDLE=~/ca-bundle.crt' >> ~/.bashrc
+
+# Reload
+source ~/.bashrc
+```
+
+**Option C: Update certifi Package**
+```bash
+source .venv/bin/activate
+
+# Update certifi
+pip install --upgrade certifi
+
+# Append corporate CA to certifi bundle
+cat /path/to/corporate-ca.crt >> $(python -m certifi)
+
+# Verify
+python -c "import certifi; print(certifi.where())"
+```
+
+### Solution C: Disable SSL Verification Globally (Not Recommended)
+
+**Only use this for testing, not production:**
+
+```bash
+# Set environment variables
+export PYTHONHTTPSVERIFY=0
+export CURL_CA_BUNDLE=""
+export REQUESTS_CA_BUNDLE=""
+
+# Run cos CLI
+cos ls
+```
+
+### Solution D: Ask IT Department
+
+Your IT department can help by providing:
+1. The corporate CA certificate file (usually `.crt` or `.pem`)
+2. Instructions for installing it system-wide
+3. Network proxy configuration (if applicable)
 
 ## Environment-Specific Solutions
 
