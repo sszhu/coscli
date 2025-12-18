@@ -147,18 +147,14 @@ def _create_cached_cos_client(profile: str = "default"):
         profile: Configuration profile name
         
     Returns:
-        COS client instance or None if initialization fails
+        WebCOSClient instance or None if initialization fails
     """
     try:
         # Import here to avoid circular dependencies
-        from cos.config import ConfigManager
-        from cos.auth import COSAuthenticator
+        from .cos_client_wrapper import WebCOSClient
         
-        config_manager = ConfigManager(profile)
-        authenticator = COSAuthenticator(config_manager)
-        cos_client = authenticator.authenticate()
-        
-        return cos_client
+        client = WebCOSClient(profile)
+        return client
     except Exception as e:
         st.error(f"Failed to initialize COS client: {str(e)}")
         return None
@@ -175,7 +171,7 @@ def get_cos_client(initialize: bool = False, profile: str = "default"):
         profile: Configuration profile to use
         
     Returns:
-        COS client instance or None
+        WebCOSClient instance or None
     """
     # Check if client needs initialization
     needs_init = (
