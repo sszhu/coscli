@@ -85,7 +85,23 @@ You'll be prompted for:
 - **Secret Key**: Your Tencent Cloud secret key
 - **Assume Role ARN**: (Optional) Role to assume
 - **Default Region**: Default region (e.g., ap-shanghai)
+- **Default Bucket**: (Optional) Default bucket name
+- **Default Prefix**: (Optional) Default prefix
 - **Output Format**: json, table, or text
+
+#### Generate Temporary Credentials
+
+For testing or temporary access:
+```bash
+# Generate 2-hour temporary token
+cos token
+
+# Use environment variables
+cos token --output env > temp_creds.sh
+source temp_creds.sh
+```
+
+**📖 More details**: [docs/TOKEN_MANAGEMENT.md](docs/TOKEN_MANAGEMENT.md)
 
 ### 2. Basic Commands
 

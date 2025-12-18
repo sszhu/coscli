@@ -3,7 +3,7 @@
 import click
 
 from .config import ConfigManager
-from .commands import configure, ls, cp, rm, mb, rb
+from .commands import configure, ls, cp, rm, mb, rb, token
 from . import __version__
 
 
@@ -51,6 +51,7 @@ cli.add_command(cp.cp)
 cli.add_command(rm.rm)
 cli.add_command(mb.mb)
 cli.add_command(rb.rb)
+cli.add_command(token.token)
 
 
 def main():

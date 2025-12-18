@@ -205,6 +205,11 @@ class ConfigManager:
         if assume_role:
             credentials["assume_role"] = assume_role
         
+        # Check for temporary token
+        token = self.get_credential_value("token")
+        if token:
+            credentials["token"] = token
+        
         return credentials
     
     def list_all_config(self) -> Dict[str, Any]:
@@ -223,7 +228,7 @@ class ConfigManager:
         # Add credential keys (but not values)
         if self.credentials.has_section(section):
             for key in self.credentials.options(section):
-                result[key] = "****" if key in ["secret_id", "secret_key"] else self.credentials.get(section, key)
+                result[key] = "****" if key in ["secret_id", "secret_key", "token"] else self.credentials.get(section, key)
         
         return result
     

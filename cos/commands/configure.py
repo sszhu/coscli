@@ -128,3 +128,31 @@ def list(profile):
     
     data = [{"Key": k, "Value": v} for k, v in config.items()]
     output_table(data)
+
+
+@configure.command(name="import-token")
+@click.option("--tmp-secret-id", required=True, help="Temporary Secret ID")
+@click.option("--tmp-secret-key", required=True, help="Temporary Secret Key")
+@click.option("--token", required=True, help="Security Token")
+@click.option("--profile", default="temp", help="Profile name (default: temp)")
+def import_token(tmp_secret_id, tmp_secret_key, token, profile):
+    """
+    Import temporary STS credentials for quick testing.
+    
+    Examples:
+        cos configure import-token --tmp-secret-id xxx --tmp-secret-key yyy --token zzz
+        
+        # Or use output from 'cos token':
+        eval $(cos token --output env)
+        cos configure import-token --tmp-secret-id $COS_SECRET_ID --tmp-secret-key $COS_SECRET_KEY --token $COS_TOKEN
+    """
+    config_manager = ConfigManager(profile)
+    
+    # Store as regular credentials (will be treated as temporary based on token presence)
+    config_manager.set_credential_value("secret_id", tmp_secret_id)
+    config_manager.set_credential_value("secret_key", tmp_secret_key)
+    config_manager.set_credential_value("token", token)
+    
+    success_message(f"Temporary credentials imported to profile: {profile}")
+    info_message("Note: These credentials will expire. Use --profile temp when using commands.")
+    info_message("Example: cos ls --profile temp")

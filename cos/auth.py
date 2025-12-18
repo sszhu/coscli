@@ -53,6 +53,7 @@ class STSTokenManager:
         self.secret_id = secret_id
         self.secret_key = secret_key
         self.assume_role = assume_role
+        self.sts_duration = STS_DURATION  # Allow overriding default duration
         self._cached_credentials: Optional[Dict[str, str]] = None
         self._expiration: Optional[float] = None
     
@@ -96,7 +97,7 @@ class STSTokenManager:
             params = {
                 "RoleArn": self.assume_role,
                 "RoleSessionName": "cos-cli-session",
-                "DurationSeconds": STS_DURATION,
+                "DurationSeconds": self.sts_duration,
             }
             req.from_json_string(json.dumps(params))
             
@@ -113,7 +114,7 @@ class STSTokenManager:
             }
             
             # Set expiration
-            self._expiration = time.time() + STS_DURATION
+            self._expiration = time.time() + self.sts_duration
             
             return self._cached_credentials
             
@@ -157,13 +158,23 @@ class COSAuthenticator:
             secret_id = credentials["secret_id"]
             secret_key = credentials["secret_key"]
             assume_role = credentials.get("assume_role")
+            temp_token = credentials.get("token")
             
             # Get region
             if region is None:
                 region = self.config_manager.get_region()
             
+            # Use temporary token if available (from import-token)
+            if temp_token:
+                config = CosConfig(
+                    Region=region,
+                    SecretId=secret_id,
+                    SecretKey=secret_key,
+                    Token=temp_token,
+                    Scheme=DEFAULT_SCHEME,
+                )
             # Use STS if assume_role is provided
-            if assume_role:
+            elif assume_role:
                 if not self.sts_manager:
                     self.sts_manager = STSTokenManager(secret_id, secret_key, assume_role)
                 
