@@ -88,6 +88,12 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progre
     
     if source_path.is_file():
         # Single file upload
+        # If destination ends with /, append source filename
+        if key and key.endswith('/'):
+            target_key = key + source_path.name
+        else:
+            target_key = key or source_path.name
+        
         if not no_progress:
             with Progress(
                 SpinnerColumn(),
@@ -98,12 +104,12 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progre
                 TransferSpeedColumn(),
             ) as progress:
                 task = progress.add_task(f"Uploading {source_path.name}...", total=source_path.stat().st_size)
-                cos_client.upload_file(str(source_path), key or source_path.name)
+                cos_client.upload_file(str(source_path), target_key)
                 progress.update(task, completed=source_path.stat().st_size)
         else:
-            cos_client.upload_file(str(source_path), key or source_path.name)
+            cos_client.upload_file(str(source_path), target_key)
         
-        success_message(f"Uploaded {source} to cos://{bucket}/{key or source_path.name}")
+        success_message(f"Uploaded {source} to cos://{bucket}/{target_key}")
     
     elif source_path.is_dir():
         if not recursive:
