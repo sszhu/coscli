@@ -31,8 +31,8 @@ from ui.components.widgets import (
     render_file_table,
     render_bulk_actions,
 )
-from ui.src.config import DEFAULT_BUCKET, DEFAULT_PAGE_SIZE, FOLDER_EMOJI
-from ui.src.utils import get_cos_client, init_session_state
+from ui.src.config import DEFAULT_BUCKET, DEFAULT_PREFIX, DEFAULT_PAGE_SIZE, FOLDER_EMOJI
+from ui.src.utils import get_cos_client, init_session_state, render_bucket_prefix_selector
 from ui.components.status_indicators import render_empty_state
 
 # ============================================================================
@@ -52,7 +52,7 @@ setup_page_simple(
 
 init_session_state({
     'current_bucket': DEFAULT_BUCKET,
-    'current_prefix': '',
+    'current_prefix': DEFAULT_PREFIX,
     'selected_files': [],
     'file_list': [],
     'folder_list': [],
@@ -73,56 +73,16 @@ init_session_state({
 
 st.markdown("### 📍 Location")
 
-col1, col2 = st.columns([1, 2])
+def handle_location_change():
+    """Reset file list when bucket/prefix changes."""
+    st.session_state.file_list = []
+    st.session_state.selected_files = []
+    st.rerun()
 
-with col1:
-    cos_client = get_cos_client()
-    
-    if cos_client:
-        try:
-            buckets = cos_client.list_buckets()
-            bucket_names = [b['Name'] for b in buckets]
-            
-            if bucket_names:
-                default_idx = 0
-                if st.session_state.current_bucket in bucket_names:
-                    default_idx = bucket_names.index(st.session_state.current_bucket)
-                
-                selected_bucket = st.selectbox(
-                    "🪣 Bucket",
-                    options=bucket_names,
-                    index=default_idx,
-                )
-                
-                if selected_bucket != st.session_state.current_bucket:
-                    st.session_state.current_bucket = selected_bucket
-                    st.session_state.current_prefix = ''
-                    st.session_state.file_list = []
-                    st.session_state.selected_files = []
-                    st.rerun()
-            else:
-                st.warning("No buckets found")
-        except Exception as e:
-            st.error(f"Failed to load buckets: {str(e)}")
-    else:
-        st.error("❌ COS not initialized. Configure in Settings.")
-        st.stop()
+bucket, prefix = render_bucket_prefix_selector(on_change_callback=handle_location_change)
 
-with col2:
-    new_prefix = st.text_input(
-        "📂 Prefix (folder path)",
-        value=st.session_state.current_prefix,
-        placeholder="data/experiments/",
-    )
-    
-    if new_prefix != st.session_state.current_prefix:
-        st.session_state.current_prefix = new_prefix
-        st.session_state.file_list = []
-        st.session_state.selected_files = []
-        st.rerun()
-
-if st.session_state.current_bucket:
-    st.info(f"📍 `cos://{st.session_state.current_bucket}/{st.session_state.current_prefix}`")
+if not bucket:
+    st.stop()
 
 st.divider()
 

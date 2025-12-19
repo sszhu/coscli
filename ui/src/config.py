@@ -22,7 +22,17 @@ APP_VERSION = "1.0.0"
 # COS CONFIGURATION
 # ============================================================================
 
-DEFAULT_BUCKET = os.getenv("COS_DEFAULT_BUCKET", "")
+def _get_cos_config_value(key: str, default: str = "") -> str:
+    """Get configuration value from COS CLI config."""
+    try:
+        from cos.config import COSConfig
+        config = COSConfig(profile=os.getenv("COS_PROFILE", "default"))
+        return config.get_config_value(key, default)
+    except Exception:
+        return default
+
+DEFAULT_BUCKET = os.getenv("COS_DEFAULT_BUCKET") or _get_cos_config_value("bucket", "")
+DEFAULT_PREFIX = os.getenv("COS_DEFAULT_PREFIX") or _get_cos_config_value("prefix", "")
 DEFAULT_REGION = os.getenv("COS_DEFAULT_REGION", "ap-shanghai")
 DEFAULT_PROFILE = os.getenv("COS_PROFILE", "default")
 

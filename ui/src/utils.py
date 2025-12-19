@@ -20,6 +20,9 @@ def inject_global_styles():
     header {visibility: hidden;}
     footer {visibility: hidden;}
     
+    /* Hide Streamlit's automatic page navigation */
+    [data-testid="stSidebarNav"] {display: none;}
+    
     /* Layout adjustments */
     .block-container {
         padding-top: 1.8rem;
@@ -105,10 +108,10 @@ def render_sidebar_navigation(current_page: str = "home"):
         st.markdown("#### 📋 Navigation")
         
         pages = [
-            ("ui/app.py", "🏠 Home", "home"),
-            ("ui/pages/file_manager.py", "🗂️ File Manager", "files"),
-            ("ui/pages/buckets.py", "🪣 Buckets", "buckets"),
-            ("ui/pages/transfers.py", "📤 Transfers", "transfers"),
+            ("app.py", "🏠 Home", "home"),
+            ("pages/file_manager.py", "🗂️ File Manager", "files"),
+            ("pages/buckets.py", "🪣 Buckets", "buckets"),
+            ("pages/transfers.py", "📤 Transfers", "transfers"),
         ]
         
         for page_path, label, page_id in pages:
@@ -121,7 +124,7 @@ def render_sidebar_navigation(current_page: str = "home"):
         
         # Settings section
         st.markdown("#### ⚙️ Settings")
-        st.page_link("ui/pages/settings.py", label="🔧 Configuration")
+        st.page_link("pages/settings.py", label="🔧 Configuration")
         
         st.divider()
         
@@ -272,6 +275,99 @@ def init_session_state(defaults: Dict[str, Any]):
     for key, value in defaults.items():
         if key not in st.session_state:
             st.session_state[key] = value
+
+
+def render_bucket_prefix_selector(on_change_callback: Optional[Callable] = None):
+    """
+    Render bucket and prefix selector with fallback for users without list permission.
+    
+    Uses selectbox if list_buckets() succeeds, otherwise uses text_input.
+    Automatically uses DEFAULT_BUCKET and DEFAULT_PREFIX from config.
+    
+    Args:
+        on_change_callback: Optional callback when bucket/prefix changes
+        
+    Returns:
+        Tuple of (bucket, prefix)
+    """
+    from ui.src.config import DEFAULT_BUCKET, DEFAULT_PREFIX
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        cos_client = get_cos_client()
+        bucket_changed = False
+        
+        if cos_client:
+            # Try to list buckets (might fail if no permission)
+            try:
+                buckets = cos_client.list_buckets()
+                bucket_names = [b['Name'] for b in buckets]
+                
+                if bucket_names:
+                    # Use selectbox if we have bucket list
+                    default_idx = 0
+                    current = st.session_state.get('current_bucket', DEFAULT_BUCKET)
+                    if current in bucket_names:
+                        default_idx = bucket_names.index(current)
+                    
+                    selected_bucket = st.selectbox(
+                        "🪣 Bucket",
+                        options=bucket_names,
+                        index=default_idx,
+                        key="bucket_selector"
+                    )
+                else:
+                    # Empty bucket list, use text input
+                    selected_bucket = st.text_input(
+                        "🪣 Bucket",
+                        value=st.session_state.get('current_bucket', DEFAULT_BUCKET),
+                        placeholder="my-bucket-name",
+                        key="bucket_input"
+                    )
+            except Exception as e:
+                # No permission to list buckets, use text input
+                st.caption("⚠️ Using manual input (no list permission)")
+                selected_bucket = st.text_input(
+                    "🪣 Bucket",
+                    value=st.session_state.get('current_bucket', DEFAULT_BUCKET),
+                    placeholder="my-bucket-name",
+                    key="bucket_input_fallback"
+                )
+            
+            # Check if bucket changed
+            if selected_bucket != st.session_state.get('current_bucket'):
+                st.session_state.current_bucket = selected_bucket
+                st.session_state.current_prefix = DEFAULT_PREFIX
+                bucket_changed = True
+        else:
+            st.error("❌ COS not initialized. Configure in Settings.")
+            return None, None
+    
+    with col2:
+        new_prefix = st.text_input(
+            "📂 Prefix (folder path)",
+            value=st.session_state.get('current_prefix', DEFAULT_PREFIX),
+            placeholder="data/experiments/",
+            key="prefix_input"
+        )
+        
+        prefix_changed = new_prefix != st.session_state.get('current_prefix')
+        if prefix_changed:
+            st.session_state.current_prefix = new_prefix
+    
+    # Show current location
+    bucket = st.session_state.get('current_bucket', DEFAULT_BUCKET)
+    prefix = st.session_state.get('current_prefix', DEFAULT_PREFIX)
+    
+    if bucket:
+        st.info(f"📍 `cos://{bucket}/{prefix}`")
+    
+    # Trigger callback if changed
+    if (bucket_changed or prefix_changed) and on_change_callback:
+        on_change_callback()
+    
+    return bucket, prefix
 
 
 def update_recent_activity(

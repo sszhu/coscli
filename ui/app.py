@@ -18,6 +18,7 @@ from ui.src.config import (
     APP_TITLE,
     APP_SUBTITLE,
     DEFAULT_BUCKET,
+    DEFAULT_PREFIX,
 )
 from ui.src.utils import (
     inject_global_styles,
@@ -50,7 +51,7 @@ if "current_bucket" not in st.session_state:
     st.session_state["current_bucket"] = DEFAULT_BUCKET
 
 if "current_prefix" not in st.session_state:
-    st.session_state["current_prefix"] = ""
+    st.session_state["current_prefix"] = DEFAULT_PREFIX
 
 if "recent_uploads" not in st.session_state:
     st.session_state["recent_uploads"] = []
@@ -140,43 +141,43 @@ with col_a:
     st.markdown("#### 🗂️ File Management")
     
     if st.button("📂 Browse Files", use_container_width=True, type="primary"):
-        st.switch_page("ui/pages/file_manager.py")
+        st.switch_page("pages/file_manager.py")
     
     if st.button("📤 Upload Files", use_container_width=True):
         st.session_state["action"] = "upload"
-        st.switch_page("ui/pages/file_manager.py")
+        st.switch_page("pages/file_manager.py")
     
     if st.button("📥 Download Files", use_container_width=True):
         st.session_state["action"] = "download"
-        st.switch_page("ui/pages/file_manager.py")
+        st.switch_page("pages/file_manager.py")
 
 with col_b:
     st.markdown("#### 🪣 Bucket Operations")
     
     if st.button("🔍 List Buckets", use_container_width=True, type="primary"):
-        st.switch_page("ui/pages/buckets.py")
+        st.switch_page("pages/buckets.py")
     
     if st.button("➕ Create Bucket", use_container_width=True):
         st.session_state["action"] = "create"
-        st.switch_page("ui/pages/buckets.py")
+        st.switch_page("pages/buckets.py")
     
     if st.button("⚙️ Configure Bucket", use_container_width=True):
         st.session_state["action"] = "configure"
-        st.switch_page("ui/pages/buckets.py")
+        st.switch_page("pages/buckets.py")
 
 with col_c:
     st.markdown("#### 📤 Batch Operations")
     
     if st.button("🔄 Sync Folders", use_container_width=True, type="primary"):
-        st.switch_page("ui/pages/transfers.py")
+        st.switch_page("pages/transfers.py")
     
     if st.button("📦 Batch Upload", use_container_width=True):
         st.session_state["transfer_mode"] = "upload"
-        st.switch_page("ui/pages/transfers.py")
+        st.switch_page("pages/transfers.py")
     
     if st.button("📦 Batch Download", use_container_width=True):
         st.session_state["transfer_mode"] = "download"
-        st.switch_page("ui/pages/transfers.py")
+        st.switch_page("pages/transfers.py")
 
 st.markdown("")
 st.divider()
@@ -281,7 +282,12 @@ st.caption("""
 # DEBUG PANEL (Development Only)
 # ============================================================================
 
-if st.secrets.get("debug_mode", False):
+try:
+    debug_mode = st.secrets.get("debug_mode", False)
+except Exception:
+    debug_mode = False
+
+if debug_mode:
     with st.expander("🐛 Debug Information", expanded=False):
         st.json({
             "session_state": {
