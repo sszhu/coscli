@@ -194,16 +194,22 @@ def get_cos_client(initialize: bool = False, profile: str = "default"):
 # FORMATTING HELPERS
 # ============================================================================
 
-def format_size(bytes_size: int) -> str:
+def format_size(bytes_size) -> str:
     """
     Format bytes into human-readable size.
     
     Args:
-        bytes_size: Size in bytes
+        bytes_size: Size in bytes (int or str)
         
     Returns:
         Formatted size string (e.g., "2.4 MB")
     """
+    # Convert to int if string
+    try:
+        bytes_size = int(bytes_size)
+    except (ValueError, TypeError):
+        return "0 B"
+    
     if bytes_size < 1024:
         return f"{bytes_size} B"
     elif bytes_size < 1024 ** 2:
