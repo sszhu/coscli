@@ -7,39 +7,20 @@ import sys
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ui.src.utils import (
-    inject_global_styles,
-    render_sidebar_navigation,
-    get_cos_client,
-    handle_error,
-)
+from ui.src.page_utils import setup_page_simple
+from ui.src.utils import get_cos_client, handle_error
 from ui.components.status_indicators import render_empty_state, render_loading_spinner
 
 # ============================================================================
-# PAGE CONFIGURATION
+# PAGE SETUP
 # ============================================================================
 
-st.set_page_config(
-    page_title="Buckets - COS Data Manager",
-    page_icon="🪣",
-    layout="wide"
+setup_page_simple(
+    title="Bucket Management",
+    icon="🪣",
+    page_id="buckets",
+    caption="Create and configure COS buckets"
 )
-
-inject_global_styles()
-
-# ============================================================================
-# SIDEBAR
-# ============================================================================
-
-render_sidebar_navigation(current_page="buckets")
-
-# ============================================================================
-# MAIN CONTENT
-# ============================================================================
-
-st.title("🪣 Bucket Management")
-st.caption("Create and configure COS buckets")
-st.markdown("")
 
 # Get COS client
 cos_client = get_cos_client()

@@ -23,15 +23,23 @@ streamlit run ui_app.py
 
 ```
 ui/
-├── src/
+├── src/                   # Core utilities & business logic
 │   ├── config.py          # Constants, colors, emojis
-│   └── utils.py           # Helper functions
-├── pages/
-│   ├── file_manager.py    # File browsing
+│   ├── cos_client_wrapper.py  # WebCOSClient wrapper
+│   ├── utils.py           # Helper functions
+│   ├── page_utils.py      # Page setup utilities
+│   └── file_operations.py # File operations logic
+├── pages/                 # Pages only
+│   ├── file_manager.py    # File browsing (refactored)
 │   ├── buckets.py         # Bucket management
 │   ├── transfers.py       # Batch operations
 │   └── settings.py        # Configuration
-├── components/            # Reusable components
+├── components/            # Reusable UI components
+│   ├── status_indicators.py
+│   ├── progress.py
+│   ├── file_display.py
+│   ├── action_buttons.py
+│   └── widgets.py         # Common widgets
 └── static/
     └── styles/
         └── page.css       # Custom CSS
@@ -129,16 +137,39 @@ with col1:
     st.metric("Label", "Value", delta="Change")
 ```
 
-### File List
+### File List (Phase 2 Enhanced)
 ```python
-for file in files:
-    col1, col2, col3 = st.columns([1, 3, 2])
+# With pagination, sorting, filtering
+files = load_files_and_folders(bucket, prefix)
+
+# Filter files
+if st.session_state.search_query:
+    files = [f for f in files if st.session_state.search_query.lower() in f['name'].lower()]
+
+if st.session_state.filter_type != 'all':
+    files = [f for f in files if f['name'].lower().endswith(st.session_state.filter_type)]
+
+# Sort files
+if st.session_state.sort_by == 'name':
+    files.sort(key=lambda f: f['name'].lower(), reverse=(st.session_state.sort_direction == 'desc'))
+
+# Paginate
+page_size = st.session_state.page_size
+page_num = st.session_state.page_num
+start_idx = (page_num - 1) * page_size
+page_files = files[start_idx:start_idx + page_size]
+
+# Display with checkboxes
+for file in page_files:
+    col1, col2, col3, col4 = st.columns([1, 3, 2, 2])
     with col1:
         st.checkbox("", key=f"select_{file['key']}")
     with col2:
         st.write(f"{get_file_emoji(file['name'])} {file['name']}")
     with col3:
         st.caption(format_size(file['size']))
+    with col4:
+        st.button("⬇️ Download", key=f"dl_{file['key']}")
 ```
 
 ### Upload Panel

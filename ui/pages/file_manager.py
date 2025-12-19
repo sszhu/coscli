@@ -1,4 +1,8 @@
-"""File Manager Page - Browse and manage files in COS buckets."""
+"""File Manager Page - Browse, upload, and manage files in COS buckets.
+
+Refactored Phase 2 Implementation: Clean separation of concerns with extracted
+helper functions and reusable components.
+"""
 
 import streamlit as st
 from pathlib import Path
@@ -7,351 +11,419 @@ import sys
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ui.src.config import DEFAULT_BUCKET, FILE_EXTENSION_EMOJIS, FOLDER_EMOJI
-from ui.src.utils import (
-    inject_global_styles,
-    render_sidebar_navigation,
-    get_cos_client,
-    format_size,
-    format_datetime,
-    get_file_emoji,
-    handle_error,
-    init_session_state,
+from ui.src.page_utils import setup_page_simple
+from ui.src.file_operations import (
+    filter_files,
+    sort_files,
+    paginate_files,
+    delete_files_batch,
+    upload_files_batch,
+    download_file,
+    get_presigned_url,
+    create_folder,
+    load_files_and_folders,
+)
+from ui.components.widgets import (
+    render_confirmation_dialog,
+    render_modal_dialog,
+    render_search_filter_bar,
+    render_pagination_controls,
+    render_file_table,
+    render_bulk_actions,
+)
+from ui.src.config import DEFAULT_BUCKET, DEFAULT_PAGE_SIZE, FOLDER_EMOJI
+from ui.src.utils import get_cos_client, init_session_state
+from ui.components.status_indicators import render_empty_state
+
+# ============================================================================
+# PAGE SETUP
+# ============================================================================
+
+setup_page_simple(
+    title="File Manager",
+    icon="🗂️",
+    page_id="files",
+    caption="Browse, upload, and manage files in COS buckets"
 )
 
 # ============================================================================
-# PAGE CONFIGURATION
-# ============================================================================
-
-st.set_page_config(
-    page_title="File Manager - COS Data Manager",
-    page_icon="🗂️",
-    layout="wide"
-)
-
-inject_global_styles()
-
-# ============================================================================
-# INITIALIZE SESSION STATE
+# SESSION STATE
 # ============================================================================
 
 init_session_state({
     'current_bucket': DEFAULT_BUCKET,
     'current_prefix': '',
     'selected_files': [],
-    'show_upload_panel': False,
     'file_list': [],
+    'folder_list': [],
+    'page_number': 1,
+    'page_size': DEFAULT_PAGE_SIZE,
+    'sort_by': 'name',
+    'sort_order': 'asc',
+    'filter_type': 'all',
+    'search_query': '',
+    'show_upload_panel': False,
+    'show_delete_confirm': False,
+    'show_new_folder': False,
 })
-
-# ============================================================================
-# SIDEBAR
-# ============================================================================
-
-render_sidebar_navigation(current_page="files")
-
-# ============================================================================
-# MAIN CONTENT
-# ============================================================================
-
-st.title("🗂️ File Manager")
-st.caption("Browse, upload, and download files from COS buckets")
-st.markdown("")
 
 # ============================================================================
 # LOCATION SELECTOR
 # ============================================================================
 
-st.markdown("### 📍 Current Location")
+st.markdown("### 📍 Location")
 
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    # Get COS client
     cos_client = get_cos_client()
     
     if cos_client:
         try:
-            # List available buckets
-            from cos.client import COSClient
-            client_wrapper = COSClient(cos_client)
-            buckets = client_wrapper.list_buckets()
+            buckets = cos_client.list_buckets()
             bucket_names = [b['Name'] for b in buckets]
             
-            current_bucket = st.selectbox(
-                "🪣 Bucket",
-                options=bucket_names,
-                index=bucket_names.index(st.session_state.current_bucket) 
-                      if st.session_state.current_bucket in bucket_names else 0,
-                key="bucket_selector"
-            )
-            st.session_state.current_bucket = current_bucket
+            if bucket_names:
+                default_idx = 0
+                if st.session_state.current_bucket in bucket_names:
+                    default_idx = bucket_names.index(st.session_state.current_bucket)
+                
+                selected_bucket = st.selectbox(
+                    "🪣 Bucket",
+                    options=bucket_names,
+                    index=default_idx,
+                )
+                
+                if selected_bucket != st.session_state.current_bucket:
+                    st.session_state.current_bucket = selected_bucket
+                    st.session_state.current_prefix = ''
+                    st.session_state.file_list = []
+                    st.session_state.selected_files = []
+                    st.rerun()
+            else:
+                st.warning("No buckets found")
         except Exception as e:
             st.error(f"Failed to load buckets: {str(e)}")
-            current_bucket = st.session_state.current_bucket
     else:
-        st.warning("COS client not initialized. Please configure credentials in Settings.")
-        current_bucket = st.text_input("🪣 Bucket", value=st.session_state.current_bucket)
+        st.error("❌ COS not initialized. Configure in Settings.")
+        st.stop()
 
 with col2:
-    current_prefix = st.text_input(
-        "📂 Prefix (path)",
+    new_prefix = st.text_input(
+        "📂 Prefix (folder path)",
         value=st.session_state.current_prefix,
         placeholder="data/experiments/",
-        help="Enter folder path (prefix) within the bucket",
-        key="prefix_input"
     )
-    st.session_state.current_prefix = current_prefix
+    
+    if new_prefix != st.session_state.current_prefix:
+        st.session_state.current_prefix = new_prefix
+        st.session_state.file_list = []
+        st.session_state.selected_files = []
+        st.rerun()
 
-# Display current path
-if current_bucket:
-    st.info(f"📍 Current location: `cos://{current_bucket}/{current_prefix}`")
+if st.session_state.current_bucket:
+    st.info(f"📍 `cos://{st.session_state.current_bucket}/{st.session_state.current_prefix}`")
 
 st.divider()
 
 # ============================================================================
-# ACTION BUTTONS
+# ACTION BAR
 # ============================================================================
 
-col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+col1, col2, col3, col4, col5 = st.columns(5)
 
 with col1:
-    if st.button("🔍 Browse Files", type="primary", use_container_width=True):
-        if cos_client and current_bucket:
-            try:
-                with st.spinner("Loading files..."):
-                    # List objects
-                    from cos.client import COSClient
-                    client_wrapper = COSClient(cos_client, current_bucket)
-                    response = client_wrapper.list_objects(prefix=current_prefix)
-                    
-                    # Parse files
-                    files = []
-                    for obj in response.get('Contents', []):
-                        if not obj['Key'].endswith('/'):  # Skip directories
-                            files.append({
-                                'key': obj['Key'],
-                                'name': Path(obj['Key']).name,
-                                'size': obj['Size'],
-                                'last_modified': obj['LastModified'],
-                            })
-                    
-                    st.session_state.file_list = files
-                    
-                    if files:
-                        st.success(f"✅ Found {len(files)} file(s)")
-                    else:
-                        st.info("📭 No files found in this location")
-                        
-            except Exception as e:
-                handle_error(e, "Failed to list files")
-        else:
-            st.warning("Please configure COS client and select a bucket")
+    if st.button("🔄 Refresh", use_container_width=True):
+        st.session_state.file_list = []
+        st.rerun()
 
 with col2:
-    if st.button("📤 Upload Files", use_container_width=True):
+    if st.button("📤 Upload", use_container_width=True, type="primary"):
         st.session_state.show_upload_panel = not st.session_state.show_upload_panel
+        st.rerun()
 
 with col3:
-    if st.button("🔄 Refresh", use_container_width=True):
-        if st.session_state.file_list:
-            # Trigger reload
-            st.rerun()
+    num_selected = len(st.session_state.selected_files)
+    if st.button(
+        f"🗑️ Delete ({num_selected})",
+        use_container_width=True,
+        disabled=(num_selected == 0)
+    ):
+        st.session_state.show_delete_confirm = True
 
 with col4:
-    st.button("⚙️", help="More options", use_container_width=True)
+    if st.button("➕ Folder", use_container_width=True):
+        st.session_state.show_new_folder = True
+
+with col5:
+    has_prefix = bool(st.session_state.current_prefix)
+    if st.button("⬆️ Up", use_container_width=True, disabled=not has_prefix):
+        parts = st.session_state.current_prefix.rstrip('/').split('/')
+        if len(parts) > 1:
+            st.session_state.current_prefix = '/'.join(parts[:-1]) + '/'
+        else:
+            st.session_state.current_prefix = ''
+        st.session_state.file_list = []
+        st.rerun()
+
+st.markdown("")
 
 # ============================================================================
 # UPLOAD PANEL
 # ============================================================================
 
 if st.session_state.show_upload_panel:
-    with st.expander("📤 Upload Files", expanded=True):
-        st.caption(f"Uploading to: `cos://{current_bucket}/{current_prefix}`")
-        
-        uploaded_files = st.file_uploader(
-            "Select files to upload",
-            accept_multiple_files=True,
-            key="file_uploader"
-        )
-        
-        if uploaded_files:
-            st.write(f"**{len(uploaded_files)} file(s) selected:**")
-            
-            # Show file preview
-            for file in uploaded_files:
-                col_a, col_b = st.columns([3, 1])
-                with col_a:
-                    st.write(f"{get_file_emoji(file.name)} {file.name}")
-                with col_b:
-                    st.caption(format_size(len(file.getvalue())))
-            
-            # Upload button
-            if st.button("🚀 Upload Now", type="primary"):
-                if cos_client:
-                    progress_bar = st.progress(0)
-                    status_text = st.empty()
-                    
-                    success_count = 0
-                    for idx, file in enumerate(uploaded_files):
-                        try:
-                            status_text.text(f"Uploading {file.name}...")
-                            
-                            # Upload file
-                            from cos.client import COSClient
-                            client_wrapper = COSClient(cos_client, current_bucket)
-                            key = f"{current_prefix}{file.name}"
-                            
-                            client_wrapper.put_object(
-                                key=key,
-                                body=file.getvalue()
-                            )
-                            
-                            success_count += 1
-                        except Exception as e:
-                            st.error(f"Failed to upload {file.name}: {str(e)}")
-                        
-                        progress_bar.progress((idx + 1) / len(uploaded_files))
-                    
-                    progress_bar.empty()
-                    status_text.empty()
-                    
-                    if success_count == len(uploaded_files):
-                        st.success(f"✅ Uploaded {success_count} file(s) successfully!")
-                    else:
-                        st.warning(f"⚠️ Uploaded {success_count}/{len(uploaded_files)} files")
-                    
-                    # Hide upload panel and refresh
-                    st.session_state.show_upload_panel = False
-                    st.rerun()
-                else:
-                    st.error("COS client not initialized")
-
-st.markdown("")
+    render_modal_dialog(
+        title="📤 Upload Files",
+        input_config={
+            'type': 'file',
+            'label': "Choose files",
+            'kwargs': {'accept_multiple_files': True},
+        },
+        on_submit=lambda files: (
+            upload_files_batch(
+                st.session_state.current_bucket,
+                st.session_state.current_prefix,
+                files
+            ),
+            setattr(st.session_state, 'show_upload_panel', False),
+            setattr(st.session_state, 'file_list', []),
+            st.rerun()
+        ),
+        on_cancel=lambda: (
+            setattr(st.session_state, 'show_upload_panel', False),
+            st.rerun()
+        ),
+        submit_label="🚀 Upload",
+    )
 
 # ============================================================================
-# FILE LIST
+# NEW FOLDER DIALOG
 # ============================================================================
 
-if st.session_state.file_list:
-    st.markdown(f"### 📄 Files ({len(st.session_state.file_list)})")
-    st.caption("Select files to download or delete")
-    st.markdown("")
+if st.session_state.show_new_folder:
+    def create_folder_callback(folder_name):
+        try:
+            folder_path = st.session_state.current_prefix + folder_name
+            create_folder(st.session_state.current_bucket, folder_path)
+            st.success(f"✅ Created: {folder_name}")
+            st.session_state.show_new_folder = False
+            st.session_state.file_list = []
+            st.rerun()
+        except Exception as e:
+            st.error(f"Failed: {str(e)}")
     
-    # Search and filter
-    col1, col2, col3 = st.columns([3, 1, 1])
-    
-    with col1:
-        search_query = st.text_input(
-            "🔍 Search",
-            placeholder="Filter by filename...",
-            label_visibility="collapsed"
-        )
-    
-    with col2:
-        sort_by = st.selectbox(
-            "Sort by",
-            options=["Name", "Size", "Date"],
-            label_visibility="collapsed"
-        )
-    
-    with col3:
-        sort_order = st.selectbox(
-            "Order",
-            options=["↑ Asc", "↓ Desc"],
-            label_visibility="collapsed"
-        )
-    
-    # Filter files
-    filtered_files = st.session_state.file_list
-    if search_query:
-        filtered_files = [f for f in filtered_files if search_query.lower() in f['name'].lower()]
-    
-    # Sort files
-    reverse = "Desc" in sort_order
-    if sort_by == "Name":
-        filtered_files = sorted(filtered_files, key=lambda x: x['name'], reverse=reverse)
-    elif sort_by == "Size":
-        filtered_files = sorted(filtered_files, key=lambda x: x['size'], reverse=reverse)
-    elif sort_by == "Date":
-        filtered_files = sorted(filtered_files, key=lambda x: x['last_modified'], reverse=reverse)
-    
-    st.markdown("")
-    
-    # File table
-    if filtered_files:
-        # Header
-        col1, col2, col3, col4, col5 = st.columns([1, 4, 2, 2, 2])
-        with col1:
-            st.markdown("**☑️**")
-        with col2:
-            st.markdown("**📄 Name**")
-        with col3:
-            st.markdown("**📦 Size**")
-        with col4:
-            st.markdown("**📅 Modified**")
-        with col5:
-            st.markdown("**Actions**")
-        
-        st.divider()
-        
-        # File rows
-        selected_files = []
-        for file in filtered_files:
-            col1, col2, col3, col4, col5 = st.columns([1, 4, 2, 2, 2])
-            
-            with col1:
-                if st.checkbox("", key=f"select_{file['key']}", label_visibility="collapsed"):
-                    selected_files.append(file)
-            
-            with col2:
-                st.write(f"{get_file_emoji(file['name'])} {file['name']}")
-            
-            with col3:
-                st.caption(format_size(file['size']))
-            
-            with col4:
-                st.caption(format_datetime(file['last_modified']))
-            
-            with col5:
-                if st.button("⬇️", key=f"download_{file['key']}", help="Download"):
-                    st.info("Download functionality coming soon!")
-        
-        # Batch actions
-        if selected_files:
-            st.divider()
-            st.markdown(f"**{len(selected_files)} file(s) selected**")
-            
-            col1, col2, col3 = st.columns([1, 1, 3])
-            with col1:
-                if st.button("📥 Download Selected", use_container_width=True):
-                    st.info("Batch download coming soon!")
-            with col2:
-                if st.button("🗑️ Delete Selected", type="primary", use_container_width=True):
-                    st.warning("Delete functionality coming soon!")
-    else:
-        st.info("📭 No files match your search criteria")
-
-elif not cos_client:
-    st.info("👈 Please configure COS credentials in Settings to get started")
-else:
-    st.info("👆 Click 'Browse Files' to load files from the selected location")
+    render_modal_dialog(
+        title="➕ Create Folder",
+        input_config={
+            'type': 'text',
+            'label': "Folder name",
+            'kwargs': {'placeholder': 'my-folder'},
+        },
+        on_submit=create_folder_callback,
+        on_cancel=lambda: (
+            setattr(st.session_state, 'show_new_folder', False),
+            st.rerun()
+        ),
+        submit_label="✅ Create",
+    )
 
 # ============================================================================
-# FOOTER
+# DELETE CONFIRMATION
 # ============================================================================
 
-st.markdown("")
+if st.session_state.show_delete_confirm:
+    render_confirmation_dialog(
+        message=f"⚠️ Delete {len(st.session_state.selected_files)} file(s)?",
+        on_confirm=lambda: (
+            delete_files_batch(
+                st.session_state.current_bucket,
+                st.session_state.selected_files
+            ),
+            setattr(st.session_state, 'show_delete_confirm', False),
+            setattr(st.session_state, 'selected_files', []),
+            setattr(st.session_state, 'file_list', []),
+            st.rerun()
+        ),
+        on_cancel=lambda: (
+            setattr(st.session_state, 'show_delete_confirm', False),
+            st.rerun()
+        ),
+    )
+
+# ============================================================================
+# SEARCH & FILTER BAR
+# ============================================================================
+
+st.markdown("### 🔍 Search & Filter")
+
+sort_options = {
+    'Name ↑': ('name', 'asc'),
+    'Name ↓': ('name', 'desc'),
+    'Size ↑': ('size', 'asc'),
+    'Size ↓': ('size', 'desc'),
+    'Date ↑': ('date', 'asc'),
+    'Date ↓': ('date', 'desc'),
+}
+
+# Find current sort display
+current_sort_display = 'Name ↑'
+for display, (by, order) in sort_options.items():
+    if by == st.session_state.sort_by and order == st.session_state.sort_order:
+        current_sort_display = display
+        break
+
+render_search_filter_bar(
+    search_value=st.session_state.search_query,
+    filter_options=['all', '.csv', '.json', '.txt', '.py', '.zip'],
+    filter_value=st.session_state.filter_type,
+    sort_options=sort_options,
+    sort_value=current_sort_display,
+    on_search_change=lambda q: (
+        setattr(st.session_state, 'search_query', q),
+        setattr(st.session_state, 'page_number', 1),
+    ),
+    on_filter_change=lambda f: (
+        setattr(st.session_state, 'filter_type', f),
+        setattr(st.session_state, 'page_number', 1),
+    ),
+    on_sort_change=lambda s: (
+        setattr(st.session_state, 'sort_by', sort_options[s][0]),
+        setattr(st.session_state, 'sort_order', sort_options[s][1]),
+    ),
+)
+
 st.divider()
 
-st.caption("""
-💡 **Tips:**
-- Use drag & drop to upload multiple files
-- Search to quickly find files
-- Select multiple files for batch operations
+# ============================================================================
+# LOAD FILES
+# ============================================================================
 
-🚧 **Work in Progress:**
-- Download functionality
-- Delete operations
-- File preview
-- Folder navigation tree
-""")
+if not st.session_state.file_list:
+    with st.spinner("Loading..."):
+        files, folders = load_files_and_folders(
+            st.session_state.current_bucket,
+            st.session_state.current_prefix
+        )
+        st.session_state.file_list = files
+        st.session_state.folder_list = folders
+
+# ============================================================================
+# FOLDERS
+# ============================================================================
+
+if st.session_state.folder_list:
+    st.markdown("### 📁 Folders")
+    
+    for folder in st.session_state.folder_list:
+        folder_name = folder.rstrip('/').split('/')[-1]
+        if st.button(
+            f"{FOLDER_EMOJI} {folder_name}/",
+            key=f"fld_{folder}",
+            use_container_width=True
+        ):
+            st.session_state.current_prefix = folder
+            st.session_state.file_list = []
+            st.rerun()
+    
+    st.divider()
+
+# ============================================================================
+# FILES
+# ============================================================================
+
+st.markdown("### 📄 Files")
+
+# Apply filters, sorting, and pagination
+filtered = filter_files(
+    st.session_state.file_list,
+    st.session_state.search_query,
+    st.session_state.filter_type
+)
+sorted_files = sort_files(
+    filtered,
+    st.session_state.sort_by,
+    st.session_state.sort_order
+)
+page_files, page_num, total_pages = paginate_files(
+    sorted_files,
+    st.session_state.page_number,
+    st.session_state.page_size
+)
+
+st.caption(
+    f"Showing {len(page_files)} of {len(sorted_files)} "
+    f"(Total: {len(st.session_state.file_list)})"
+)
+
+if not page_files:
+    render_empty_state(
+        title="No Files Found",
+        message="Adjust your filters or upload files.",
+        icon="📭"
+    )
+else:
+    # File download handler
+    def handle_download(file):
+        try:
+            content = download_file(st.session_state.current_bucket, file)
+            st.download_button(
+                label=f"💾 Save {file['name']}",
+                data=content,
+                file_name=file['name'],
+                mime='application/octet-stream',
+                key=f"save_{file['key']}"
+            )
+        except Exception as e:
+            st.error(f"Failed: {str(e)}")
+    
+    # URL generation handler
+    def handle_url(file):
+        try:
+            url = get_presigned_url(
+                st.session_state.current_bucket,
+                file['key'],
+                expires_in=3600
+            )
+            st.code(url, language=None)
+            st.caption("⏱️ Expires in 1 hour")
+        except Exception as e:
+            st.error(f"Failed: {str(e)}")
+    
+    # Render file table
+    render_file_table(
+        files=page_files,
+        selected_keys=st.session_state.selected_files,
+        on_selection_change=lambda keys: setattr(
+            st.session_state,
+            'selected_files',
+            keys
+        ),
+        on_download=handle_download,
+        on_url=handle_url,
+    )
+
+# ============================================================================
+# PAGINATION
+# ============================================================================
+
+render_pagination_controls(
+    page_num=page_num,
+    total_pages=total_pages,
+    on_page_change=lambda p: (
+        setattr(st.session_state, 'page_number', p),
+        st.rerun()
+    ),
+)
+
+# ============================================================================
+# BULK ACTIONS
+# ============================================================================
+
+render_bulk_actions(
+    selected_count=len(st.session_state.selected_files),
+    on_clear=lambda: (
+        setattr(st.session_state, 'selected_files', []),
+        st.rerun()
+    ),
+)

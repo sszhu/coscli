@@ -7,38 +7,20 @@ import sys
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ui.src.utils import (
-    inject_global_styles,
-    render_sidebar_navigation,
-    get_cos_client,
-)
+from ui.src.page_utils import setup_page_simple
+from ui.src.utils import get_cos_client
 from ui.src.config import DEFAULT_REGION, DEFAULT_BUCKET
 
 # ============================================================================
-# PAGE CONFIGURATION
+# PAGE SETUP
 # ============================================================================
 
-st.set_page_config(
-    page_title="Settings - COS Data Manager",
-    page_icon="⚙️",
-    layout="wide"
+setup_page_simple(
+    title="Settings",
+    icon="⚙️",
+    page_id="settings",
+    caption="Configure credentials and application preferences"
 )
-
-inject_global_styles()
-
-# ============================================================================
-# SIDEBAR
-# ============================================================================
-
-render_sidebar_navigation(current_page="settings")
-
-# ============================================================================
-# MAIN CONTENT
-# ============================================================================
-
-st.title("⚙️ Settings")
-st.caption("Configure credentials and application preferences")
-st.markdown("")
 
 # Tabs for different settings
 tab1, tab2, tab3 = st.tabs(["🔐 Credentials", "👤 Profiles", "🎨 Preferences"])

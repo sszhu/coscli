@@ -46,35 +46,46 @@ The UI will open in your browser at http://localhost:8501
 ```
 coscli/
 ├── ui_app.py                      # Main entry point (Home page)
-├── UI_DESIGN.md                   # Complete design documentation
-├── UI_COMPONENTS.md               # Component breakdown and specs
-├── README_UI.md                   # This file
+│
+├── docs/ui/                       # Documentation
+│   ├── UI_DESIGN.md               # Complete design documentation
+│   ├── UI_COMPONENTS.md           # Component breakdown and specs
+│   ├── README_UI.md               # This file
+│   ├── PHASE1_COMPLETE.md         # ✅ Phase 1 summary (2,100+ lines)
+│   ├── PHASE2_COMPLETE.md         # ✅ Phase 2 summary (enhanced file manager)
+│   └── QUICKREF.md                # Quick reference guide
 │
 ├── ui/                            # UI application directory
 │   ├── pages/                     # Multi-page Streamlit pages
-│   │   ├── file_manager.py        # File browsing and management
-│   │   ├── buckets.py             # Bucket management (TODO)
-│   │   ├── transfers.py           # Batch operations (TODO)
-│   │   └── settings.py            # Configuration (TODO)
+│   │   ├── file_manager.py        # ✅ File browsing (Phase 2 refactored - 429 lines)
+│   │   ├── buckets.py             # Bucket management
+│   │   ├── transfers.py           # Batch operations (Phase 3)
+│   │   └── settings.py            # Configuration
 │   │
-│   ├── components/                # Reusable UI components
-│   │   ├── layout/                # Layout components
-│   │   ├── navigation/            # Navigation components
-│   │   ├── data_display/          # Data display components
-│   │   ├── input/                 # Input components
-│   │   ├── feedback/              # Feedback components
-│   │   └── actions/               # Action components
+│   ├── components/                # ✅ Reusable UI components
+│   │   ├── status_indicators.py   # Status badges, state displays
+│   │   ├── progress.py            # Progress bars, BatchProgress
+│   │   ├── file_display.py        # File list, file cards
+│   │   ├── action_buttons.py      # Action buttons with states
+│   │   └── widgets.py             # ✨ Common widgets (dialogs, tables, pagination)
 │   │
-│   ├── src/                       # Core utilities
-│   │   ├── config.py              # Configuration constants
-│   │   ├── utils.py               # Utility functions
-│   │   └── cos_client.py          # COS client wrapper (TODO)
+│   ├── src/                       # Core utilities & business logic
+│   │   ├── config.py              # ✅ Configuration constants (Phase 1)
+│   │   ├── utils.py               # ✅ Utility functions (Phase 1)
+│   │   ├── cos_client_wrapper.py  # ✅ WebCOSClient wrapper (Phase 1 - 450 lines)
+│   │   ├── page_utils.py          # ✨ Page setup utilities (refactored)
+│   │   └── file_operations.py     # ✨ File operations logic (refactored)
 │   │
 │   └── static/                    # Static assets
 │       ├── styles/                # CSS styles
 │       │   └── page.css           # Custom CSS
 │       └── logos/                 # Logo images
 │           └── tencent-logo.svg   # Tencent branding
+│
+├── tests/ui/                      # ✅ Test suite (Phase 1 & 2)
+│   ├── test_cos_client_wrapper.py # WebCOSClient tests
+│   ├── test_file_manager.py       # File manager tests (40+ cases)
+│   └── ...
 │
 └── cos/                           # Existing COS CLI (unchanged)
     ├── cli.py

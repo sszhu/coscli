@@ -14,6 +14,10 @@ Welcome to the COS Data Manager UI documentation. This index will help you find 
 | [UI_COMPONENTS.md](UI_COMPONENTS.md) | Component library documentation | Developers | 20 min |
 | [UI_MOCKUPS.md](UI_MOCKUPS.md) | Visual ASCII layouts | Everyone | 10 min |
 | [README_UI.md](README_UI.md) | Implementation guide | Developers | 15 min |
+| [PHASE1_COMPLETE.md](PHASE1_COMPLETE.md) | Phase 1 implementation summary | Developers | 10 min |
+| [PHASE2_COMPLETE.md](PHASE2_COMPLETE.md) | Phase 2 implementation summary | Developers | 10 min |
+| [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) | Code refactoring guide | Developers | 15 min |
+| [MODULE_ORGANIZATION.md](MODULE_ORGANIZATION.md) | Module structure guide | Developers | 10 min |
 
 ---
 
@@ -55,9 +59,11 @@ Welcome to the COS Data Manager UI documentation. This index will help you find 
 
 1. Start with [QUICKREF.md](QUICKREF.md) for setup (2 min)
 2. Follow [README_UI.md](README_UI.md) for installation (5 min)
-3. Reference [UI_COMPONENTS.md](UI_COMPONENTS.md) while coding (ongoing)
-4. Check [UI_DESIGN.md](UI_DESIGN.md) Section 10 for implementation notes
-5. Use [QUICKREF.md](QUICKREF.md) as daily reference
+3. Review [REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md) for code organization (15 min)
+4. Check [MODULE_ORGANIZATION.md](MODULE_ORGANIZATION.md) for module structure (10 min)
+5. Reference [UI_COMPONENTS.md](UI_COMPONENTS.md) while coding (ongoing)
+6. Check [UI_DESIGN.md](UI_DESIGN.md) Section 10 for implementation notes
+7. Use [QUICKREF.md](QUICKREF.md) as daily reference
 
 **Implementation checklist**:
 - [ ] Set up development environment

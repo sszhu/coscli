@@ -7,38 +7,20 @@ import sys
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from ui.src.utils import (
-    inject_global_styles,
-    render_sidebar_navigation,
-    get_cos_client,
-)
+from ui.src.page_utils import setup_page_simple
+from ui.src.utils import get_cos_client
 from ui.components.status_indicators import render_empty_state
 
 # ============================================================================
-# PAGE CONFIGURATION
+# PAGE SETUP
 # ============================================================================
 
-st.set_page_config(
-    page_title="Transfers - COS Data Manager",
-    page_icon="📤",
-    layout="wide"
+setup_page_simple(
+    title="Batch Transfers",
+    icon="📤",
+    page_id="transfers",
+    caption="Upload, download, and sync multiple files"
 )
-
-inject_global_styles()
-
-# ============================================================================
-# SIDEBAR
-# ============================================================================
-
-render_sidebar_navigation(current_page="transfers")
-
-# ============================================================================
-# MAIN CONTENT
-# ============================================================================
-
-st.title("📤 Batch Transfers")
-st.caption("Upload, download, and sync multiple files")
-st.markdown("")
 
 # Tabs for different transfer types
 tab1, tab2, tab3 = st.tabs(["📤 Batch Upload", "📥 Batch Download", "🔄 Sync"])
