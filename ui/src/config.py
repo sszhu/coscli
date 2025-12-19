@@ -23,11 +23,25 @@ APP_VERSION = "1.0.0"
 # ============================================================================
 
 def _get_cos_config_value(key: str, default: str = "") -> str:
-    """Get configuration value from COS CLI config."""
+    """Get configuration value from COS CLI config file directly."""
     try:
-        from cos.config import COSConfig
-        config = COSConfig(profile=os.getenv("COS_PROFILE", "default"))
-        return config.get_config_value(key, default)
+        from configparser import ConfigParser
+        config_file = Path.home() / ".cos" / "config"
+        
+        if not config_file.exists():
+            return default
+        
+        config = ConfigParser()
+        config.read(config_file)
+        
+        profile = os.getenv("COS_PROFILE", "default")
+        section = profile if profile == "default" else f"profile {profile}"
+        
+        if config.has_section(section) and config.has_option(section, key):
+            value = config.get(section, key)
+            return value if value else default
+        
+        return default
     except Exception:
         return default
 
