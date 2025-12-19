@@ -32,7 +32,7 @@ This document provides a complete guide for implementing and running the COS Dat
 pip install streamlit
 
 # Run the UI
-streamlit run ui_app.py
+streamlit run ui/app.py
 ```
 
 The UI will open in your browser at http://localhost:8501
@@ -45,7 +45,7 @@ The UI will open in your browser at http://localhost:8501
 
 ```
 coscli/
-├── ui_app.py                      # Main entry point (Home page)
+├── ui/app.py                      # Main entry point (Home page)
 │
 ├── docs/ui/                       # Documentation
 │   ├── UI_DESIGN.md               # Complete design documentation
@@ -163,20 +163,20 @@ debug_mode = false
 
 ```bash
 # Run with auto-reload
-streamlit run ui_app.py
+streamlit run ui/app.py
 
 # Run on specific port
-streamlit run ui_app.py --server.port 8502
+streamlit run ui/app.py --server.port 8502
 
 # Run with debug mode
-streamlit run ui_app.py --logger.level=debug
+streamlit run ui/app.py --logger.level=debug
 ```
 
 ### Production Mode
 
 ```bash
 # Run in production (no auto-reload)
-streamlit run ui_app.py --server.headless true
+streamlit run ui/app.py --server.headless true
 ```
 
 ### Docker Deployment (Optional)
@@ -199,7 +199,7 @@ COPY . .
 EXPOSE 8501
 
 # Run app
-CMD ["streamlit", "run", "ui_app.py", "--server.headless", "true", "--server.address", "0.0.0.0"]
+CMD ["streamlit", "run", "ui/app.py", "--server.headless", "true", "--server.address", "0.0.0.0"]
 ```
 
 Build and run:

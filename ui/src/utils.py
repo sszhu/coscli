@@ -105,7 +105,7 @@ def render_sidebar_navigation(current_page: str = "home"):
         st.markdown("#### 📋 Navigation")
         
         pages = [
-            ("ui_app.py", "🏠 Home", "home"),
+            ("ui/app.py", "🏠 Home", "home"),
             ("ui/pages/file_manager.py", "🗂️ File Manager", "files"),
             ("ui/pages/buckets.py", "🪣 Buckets", "buckets"),
             ("ui/pages/transfers.py", "📤 Transfers", "transfers"),

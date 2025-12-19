@@ -177,7 +177,7 @@ coscli/
 │       ├── UI_COMPONENTS.md    ← Component library (35+ pages)
 │       ├── UI_MOCKUPS.md       ← Visual mockups (20+ pages)
 │       └── README_UI.md        ← Implementation guide (25+ pages)
-├── ui_app.py                   ← Main application (runnable)
+├── ui/app.py                   ← Main application (runnable)
 └── ui/
     ├── src/
     │   ├── config.py           ← Configuration
@@ -197,7 +197,7 @@ coscli/
 1. [SUMMARY.md](SUMMARY.md) - 5 min
 2. [UI_MOCKUPS.md](UI_MOCKUPS.md) - 10 min
 3. [README_UI.md](README_UI.md) Quick Start - 5 min
-4. Run the app: `streamlit run ui_app.py`
+4. Run the app: `streamlit run ui/app.py`
 
 ### Intermediate (Ready to contribute)
 1. [QUICKREF.md](QUICKREF.md) - 2 min
@@ -341,7 +341,7 @@ A: Basic structure is ready. Complete implementation needs 4-6 weeks following t
 1. **First time here?** → [SUMMARY.md](SUMMARY.md)
 2. **Want to code?** → [QUICKREF.md](QUICKREF.md)
 3. **Need full context?** → [UI_DESIGN.md](UI_DESIGN.md)
-4. **Just want to see it?** → `streamlit run ui_app.py`
+4. **Just want to see it?** → `streamlit run ui/app.py`
 
 ---
 

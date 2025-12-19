@@ -133,8 +133,8 @@ This document summarizes all deliverables for the COS CLI Data Management UI des
 
 ---
 
-### 5. **ui_app.py** - Working Implementation (Home Page)
-**Location**: `ui_app.py` (project root)
+### 5. **app.py** - Working Implementation (Home Page)
+**Location**: `ui/app.py`
 
 **Contents**:
 - Complete Streamlit application entry point
@@ -351,7 +351,7 @@ This document summarizes all deliverables for the COS CLI Data Management UI des
 
 ### For Developers
 1. Install Streamlit: `pip install streamlit`
-2. Run app: `streamlit run ui_app.py`
+2. Run app: `streamlit run ui/app.py`
 3. Configure COS: `cos configure` (use existing CLI)
 4. Start developing: Follow `README_UI.md` dev guide
 
@@ -370,7 +370,7 @@ coscli/
 │       ├── SUMMARY.md         ← This file
 │       ├── QUICKREF.md        ← Quick reference
 │       └── INDEX.md           ← Documentation index
-├── ui_app.py                  ← Main application (HOME)
+├── ui/app.py                  ← Main application (HOME)
 └── ui/
     ├── src/
     │   ├── config.py          ← Configuration

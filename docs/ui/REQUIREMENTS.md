@@ -52,7 +52,7 @@ python -m cos --version
 
 ```bash
 # From the coscli directory
-streamlit run ui_app.py
+streamlit run ui/app.py
 ```
 
 The UI will open at http://localhost:8501
@@ -82,7 +82,7 @@ pytest tests/ui/test_cos_client_wrapper.py -v
 By default, Streamlit uses port 8501. To use a different port:
 
 ```bash
-streamlit run ui_app.py --server.port 8080
+streamlit run ui/app.py --server.port 8080
 ```
 
 ## Troubleshooting
@@ -103,7 +103,7 @@ pip install pytest pytest-mock
 pkill -f streamlit
 
 # Or use a different port
-streamlit run ui_app.py --server.port 8502
+streamlit run ui/app.py --server.port 8502
 ```
 
 ### Virtual environment issues

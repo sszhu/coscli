@@ -64,7 +64,7 @@ Reusable UI components for consistent interface:
 #### 3. Page Structure ✅
 Complete multi-page Streamlit app with navigation:
 
-**Main App** ([ui_app.py](../ui_app.py)):
+**Main App** ([ui/app.py](../ui/app.py)):
 - Dashboard with system metrics
 - Quick actions panel
 - Recent activity tracking
@@ -145,7 +145,7 @@ Enter your credentials:
 
 ### 3. Launch UI
 ```bash
-streamlit run ui_app.py
+streamlit run ui/app.py
 ```
 
 The UI will open in your browser at `http://localhost:8501`
@@ -191,7 +191,7 @@ The UI will open in your browser at `http://localhost:8501`
 | File Display Components | ✅ Complete | `file_display.py` | 250+ | Manual |
 | Action Components | ✅ Complete | `action_buttons.py` | 200+ | Manual |
 | Progress Components | ✅ Complete | `progress.py` | 200+ | Manual |
-| Main App | ✅ Complete | `ui_app.py` | 300+ | Manual |
+| Main App | ✅ Complete | `ui/app.py` | 300+ | Manual |
 | Buckets Page | ✅ Complete | `buckets.py` | 90+ | Manual |
 | Settings Page | ✅ Complete | `settings.py` | 130+ | Manual |
 | Transfers Page | ✅ Complete | `transfers.py` | 70+ | Manual |

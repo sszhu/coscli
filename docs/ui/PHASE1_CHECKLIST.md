@@ -66,7 +66,7 @@
 - [x] **__init__.py** - Component exports
 
 ### Pages
-- [x] **ui_app.py** - Main dashboard (existing, enhanced)
+- [x] **ui/app.py** - Main dashboard (existing, enhanced)
   - [x] System metrics
   - [x] Quick actions
   - [x] Recent activity
@@ -318,7 +318,7 @@ docs/ui/
 
 3. Launch UI:
    ```bash
-   streamlit run ui_app.py
+   streamlit run ui/app.py
    ```
 
 4. Verify all pages work

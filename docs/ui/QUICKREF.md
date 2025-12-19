@@ -14,7 +14,7 @@ pip install streamlit
 cos configure
 
 # Run the application
-streamlit run ui_app.py
+streamlit run ui/app.py
 ```
 
 ---
