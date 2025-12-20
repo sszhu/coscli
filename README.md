@@ -594,6 +594,10 @@ MIT License - see LICENSE file for details
 
 - **Quick Reference**: [docs/QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md)
 - **Development Plan**: [docs/COS_CLI_DEVELOPMENT_PLAN.md](docs/COS_CLI_DEVELOPMENT_PLAN.md)
+- **Implementation Summary (v1.1.0)**: [docs/IMPLEMENTATION_SUMMARY.md](docs/IMPLEMENTATION_SUMMARY.md)
+- **Implementation Complete (v2.0.0)**: [docs/IMPLEMENTATION_COMPLETE_V2.md](docs/IMPLEMENTATION_COMPLETE_V2.md)
+- **Final Verification Report**: [docs/VERIFICATION_COMPLETE.md](docs/VERIFICATION_COMPLETE.md)
+- **Release Notes (v2.0.0)**: [docs/RELEASE_NOTES_2.0.0.md](docs/RELEASE_NOTES_2.0.0.md)
 - **Full Index**: [docs/INDEX.md](docs/INDEX.md)
 
 ## Changelog
