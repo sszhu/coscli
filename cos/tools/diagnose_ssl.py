@@ -10,14 +10,17 @@ import ssl
 import certifi
 from pathlib import Path
 
+
 def print_header(text):
     print(f"\n{'='*60}")
     print(f"  {text}")
     print('='*60)
 
+
 def print_section(text):
     print(f"\n{text}")
     print('-' * len(text))
+
 
 def check_environment_variables():
     """Check SSL-related environment variables"""
@@ -43,6 +46,7 @@ def check_environment_variables():
     if not found_any:
         print("ℹ No SSL environment variables set")
 
+
 def check_certifi():
     """Check certifi certificate bundle"""
     print_section("Certifi Certificate Bundle")
@@ -60,6 +64,7 @@ def check_certifi():
     except Exception as e:
         print(f"❌ Error checking certifi: {e}")
 
+
 def check_ssl_context():
     """Check default SSL context"""
     print_section("SSL Context")
@@ -75,6 +80,7 @@ def check_ssl_context():
             print(f"✓ CA certs: {context.ca_certs}")
     except Exception as e:
         print(f"❌ Error creating SSL context: {e}")
+
 
 def check_system_ca_paths():
     """Check common system CA certificate paths"""
@@ -97,6 +103,7 @@ def check_system_ca_paths():
     
     if not found_any:
         print("ℹ No system CA certificates found at common paths")
+
 
 def test_https_connection():
     """Test HTTPS connection to Tencent Cloud"""
@@ -122,15 +129,17 @@ def test_https_connection():
     
     return True
 
+
 def check_cos_cli_auth():
     """Check if COS CLI auth module has SSL bypass"""
     print_section("COS CLI SSL Bypass")
     
     try:
-        auth_file = Path(__file__).parent / 'cos' / 'auth.py'
+        # Navigate up from cos/tools/diagnose_ssl.py to cos/auth.py
+        auth_file = Path(__file__).parent.parent / 'auth.py'
         
         if not auth_file.exists():
-            # Try alternative path
+            # Try alternative path from current working directory
             auth_file = Path.cwd() / 'cos' / 'auth.py'
         
         if auth_file.exists():
@@ -149,6 +158,7 @@ def check_cos_cli_auth():
             print(f"   Looked in: {auth_file}")
     except Exception as e:
         print(f"⚠ Error checking auth module: {e}")
+
 
 def print_recommendations():
     """Print recommendations based on findings"""
@@ -174,6 +184,7 @@ If you're experiencing SSL certificate errors:
    docs/SSL_TROUBLESHOOTING.md
 """)
 
+
 def main():
     print_header("COS CLI SSL Diagnostic Tool")
     
@@ -195,6 +206,7 @@ def main():
     else:
         print_header("Status: ✓ All Good!")
         print("\nNo SSL issues detected. COS CLI should work correctly.")
+
 
 if __name__ == '__main__':
     main()

@@ -20,7 +20,7 @@ A powerful command-line interface for Tencent Cloud Object Storage (COS), design
 ### From PyPI (Recommended)
 
 ```bash
-pip install tencentcloud-cos-cli
+pip install cos-cli
 ```
 
 That's it! The `cos` command will be available in your PATH.
@@ -80,7 +80,7 @@ curl -LsSfk https://astral.sh/uv/install.sh | sh
 **SSL Certificate Issues?**
 ```bash
 # Run diagnostic tool to identify the issue
-python diagnose_ssl.py
+python -m cos.tools.diagnose_ssl
 ```
 
 **📖 More details**: 

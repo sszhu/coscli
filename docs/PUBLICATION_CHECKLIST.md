@@ -79,7 +79,7 @@ python -m build
 # Verify build artifacts
 ls -lh dist/
 # Should see:
-# - tencentcloud-cos-cli-2.0.0.tar.gz
+# - cos-cli-2.0.0.tar.gz
 # - tencentcloud_cos_cli-2.0.0-py3-none-any.whl
 ```
 
@@ -112,7 +112,7 @@ pip install twine
 python -m twine upload --repository testpypi dist/*
 
 # Test installation from Test PyPI
-pip install --index-url https://test.pypi.org/simple/ tencentcloud-cos-cli
+pip install --index-url https://test.pypi.org/simple/ cos-cli
 
 # If successful, proceed to production PyPI
 ```
@@ -135,14 +135,14 @@ pip install --index-url https://test.pypi.org/simple/ tencentcloud-cos-cli
 python -m twine upload dist/*
 
 # Verify upload at:
-# https://pypi.org/project/tencentcloud-cos-cli/
+# https://pypi.org/project/cos-cli/
 ```
 
 ### 5. Test Installation from PyPI
 
 ```bash
 # In a fresh environment
-pip install tencentcloud-cos-cli
+pip install cos-cli
 
 # Verify installation
 cos --version
@@ -237,7 +237,7 @@ A powerful command-line interface for Tencent Cloud Object Storage (COS), design
 
 ### From PyPI
 ```bash
-pip install tencentcloud-cos-cli
+pip install cos-cli
 ```
 
 ### From Source
@@ -305,7 +305,7 @@ MIT License - see [LICENSE](https://github.com/sszhu/coscli/blob/main/LICENSE) f
 ```
 
 **Attach Files:**
-- Upload `dist/tencentcloud-cos-cli-2.0.0.tar.gz`
+- Upload `dist/cos-cli-2.0.0.tar.gz`
 - Upload `dist/tencentcloud_cos_cli-2.0.0-py3-none-any.whl`
 
 ### 4. Update Repository Settings (Optional)
@@ -342,7 +342,7 @@ A powerful CLI tool for Tencent Cloud Object Storage with:
 - 169 tests, 100% passing
 - MIT licensed
 
-Install: pip install tencentcloud-cos-cli
+Install: pip install cos-cli
 Docs: https://github.com/sszhu/coscli
 
 #TencentCloud #Python #CLI #OpenSource
@@ -361,8 +361,8 @@ Docs: https://github.com/sszhu/coscli
 
 ### Verification
 
-- [ ] Package visible on PyPI: https://pypi.org/project/tencentcloud-cos-cli/
-- [ ] Installation works: `pip install tencentcloud-cos-cli`
+- [ ] Package visible on PyPI: https://pypi.org/project/cos-cli/
+- [ ] Installation works: `pip install cos-cli`
 - [ ] GitHub release visible: https://github.com/sszhu/coscli/releases
 - [ ] README badges working
 - [ ] Documentation accessible
@@ -422,7 +422,7 @@ Docs: https://github.com/sszhu/coscli
 
 ### PyPI Package Name
 
-- **Package name**: `tencentcloud-cos-cli`
+- **Package name**: `cos-cli`
 - **Import name**: `cos`
 - **Command**: `cos`
 

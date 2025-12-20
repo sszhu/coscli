@@ -447,7 +447,7 @@ class NetworkError(COSError): pass
 
 ```python
 setup(
-    name='tencentcloud-cos-cli',
+    name='cos-cli',
     version='1.0.0',
     description='Command line interface for Tencent Cloud Object Storage',
     entry_points={
@@ -463,7 +463,7 @@ setup(
 
 **PyPI:**
 ```bash
-pip install tencentcloud-cos-cli
+pip install cos-cli
 ```
 
 **From Source:**

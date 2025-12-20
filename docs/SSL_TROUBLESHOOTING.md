@@ -102,12 +102,12 @@ source .venv/bin/activate
 pip install -e . --force-reinstall --no-cache-dir
 ```
 
-**Verify the SSL bypass is active:**
+**Run diagnostic tool to verify:**
 ```bash
-grep -A 5 "patched_request" cos/auth.py
+python -m cos.tools.diagnose_ssl
 ```
 
-You should see the SSL verification bypass code.
+This will check if the SSL bypass is active and identify any issues.
 
 ### Solution B: Install Corporate CA Certificates (Recommended for Production)
 
