@@ -248,10 +248,10 @@ class WebCOSClient:
             COSError: If download fails
         """
         try:
-            # Get object
-            response = self.cos_client.get_object(
-                bucket=bucket,
-                key=key,
+            # Get object using base client
+            response = self.base_client.get_object(
+                Bucket=bucket,
+                Key=key,
             )
             
             # Read content with progress tracking
@@ -389,23 +389,26 @@ class WebCOSClient:
         bucket: str,
         key: str,
         expires_in: int = 3600,
+        method: str = 'GET',
     ) -> str:
         """
-        Generate a presigned URL for object download.
+        Generate a presigned URL for object access.
         
         Args:
             bucket: Bucket name
             key: Object key
             expires_in: Expiration time in seconds (default 1 hour)
+            method: HTTP method (GET, PUT, DELETE)
             
         Returns:
             Presigned URL string
         """
         try:
-            url = self.cos_client.generate_presigned_url(
-                bucket=bucket,
-                key=key,
-                expires_in=expires_in,
+            url = self.base_client.get_presigned_url(
+                Method=method,
+                Bucket=bucket,
+                Key=key,
+                Expired=expires_in,
             )
             return url
         except Exception as e:

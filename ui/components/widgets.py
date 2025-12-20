@@ -204,7 +204,7 @@ def render_file_table(
         c1, c2, c3, c4 = st.columns([0.5, 4, 1.5, 1.5])
     
     with c1:
-        select_all = st.checkbox("", key="sel_all", label_visibility="collapsed")
+        select_all = st.checkbox("Select All", key="sel_all", label_visibility="collapsed")
         if select_all and len(selected_keys) != len(files):
             on_selection_change([f['key'] for f in files])
         elif not select_all and len(selected_keys) == len(files):
@@ -232,7 +232,7 @@ def render_file_table(
         with c1:
             is_sel = file['key'] in selected_keys
             checked = st.checkbox(
-                "",
+                "Select",
                 value=is_sel,
                 key=f"c_{file['key']}",
                 label_visibility="collapsed"

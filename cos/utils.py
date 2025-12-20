@@ -47,16 +47,23 @@ def parse_cos_uri(uri: str) -> tuple[str, str]:
     return bucket, key
 
 
-def format_size(size: int) -> str:
+def format_size(size) -> str:
     """
     Format size in bytes to human-readable format.
     
     Args:
-        size: Size in bytes
+        size: Size in bytes (int or str)
         
     Returns:
         Human-readable size string
     """
+    # Convert to int if string
+    try:
+        size = int(size)
+    except (ValueError, TypeError):
+        return "0.0 B"
+    
+    size = float(size)
     for unit in ["B", "KB", "MB", "GB", "TB"]:
         if size < 1024.0:
             return f"{size:.1f} {unit}"
@@ -64,16 +71,39 @@ def format_size(size: int) -> str:
     return f"{size:.1f} PB"
 
 
-def format_datetime(dt: datetime) -> str:
+def format_datetime(dt) -> str:
     """
     Format datetime to string.
     
     Args:
-        dt: Datetime object
+        dt: Datetime object or ISO format string
         
     Returns:
         Formatted datetime string
     """
+    if not dt:
+        return "N/A"
+    
+    # Parse string to datetime if needed
+    if isinstance(dt, str):
+        try:
+            # Try ISO format first (common from COS API)
+            dt_parsed = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+            return dt_parsed.strftime("%Y-%m-%d %H:%M:%S")
+        except (ValueError, AttributeError):
+            try:
+                # Try common datetime formats
+                for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"]:
+                    try:
+                        dt_parsed = datetime.strptime(dt, fmt)
+                        return dt_parsed.strftime("%Y-%m-%d %H:%M:%S")
+                    except ValueError:
+                        continue
+                # Return original string if parsing fails
+                return dt
+            except Exception:
+                return dt
+    
     return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 

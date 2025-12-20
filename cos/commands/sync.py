@@ -40,7 +40,10 @@ def get_local_files(directory):
 def get_cos_files(cos_client, prefix=""):
     """Get list of COS objects with metadata"""
     files = {}
-    objects = cos_client.list_objects(prefix=prefix, delimiter="")
+    response = cos_client.list_objects(prefix=prefix, delimiter="")
+    
+    # Extract objects from response dictionary
+    objects = response.get("Contents", [])
     
     for obj in objects:
         key = obj["Key"]

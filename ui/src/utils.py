@@ -225,7 +225,7 @@ def format_datetime(dt) -> str:
     Format datetime into relative or absolute string.
     
     Args:
-        dt: Datetime object
+        dt: Datetime object or ISO format string
         
     Returns:
         Formatted datetime string
@@ -234,6 +234,25 @@ def format_datetime(dt) -> str:
     
     if not dt:
         return "N/A"
+    
+    # Parse string to datetime if needed
+    if isinstance(dt, str):
+        try:
+            # Try ISO format first
+            dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
+        except (ValueError, AttributeError):
+            try:
+                # Try common datetime formats
+                for fmt in ["%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"]:
+                    try:
+                        dt = datetime.strptime(dt, fmt)
+                        break
+                    except ValueError:
+                        continue
+                else:
+                    return dt  # Return original string if parsing fails
+            except Exception:
+                return dt
     
     now = datetime.now(dt.tzinfo) if dt.tzinfo else datetime.now()
     diff = now - dt
