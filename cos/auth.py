@@ -96,7 +96,7 @@ class STSTokenManager:
             req = sts_models.AssumeRoleRequest()
             params = {
                 "RoleArn": self.assume_role,
-                "RoleSessionName": "cos-cli-session",
+                "RoleSessionName": "tencent-cos-cli-session",
                 "DurationSeconds": self.sts_duration,
             }
             req.from_json_string(json.dumps(params))

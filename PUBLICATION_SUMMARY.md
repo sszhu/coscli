@@ -21,7 +21,7 @@
 
 ### 3. Package Configuration
 - ✅ **pyproject.toml** complete with:
-  - Package name: `cos-cli`
+  - Package name: `tencent-cos-cli`
   - Version: 2.0.0
   - License: MIT
   - Author: Shanshan Zhu (sszhu.soft@gmail.com)
@@ -37,7 +37,7 @@
 
 ## 📦 Package Details
 
-- **Package Name (PyPI)**: `cos-cli`
+- **Package Name (PyPI)**: `tencent-cos-cli`
 - **Import Name**: `cos`
 - **Command**: `cos`
 - **Version**: 2.0.0
@@ -150,7 +150,7 @@ The current environment has SSL certificate verification issues (self-signed cer
    # Test PyPI installation in fresh environment
    python -m venv verify-env
    source verify-env/bin/activate
-   pip install cos-cli
+   pip install tencent-cos-cli
    cos --version
    cos --help
    ```
@@ -163,8 +163,8 @@ Create `.github/workflows/publish.yml` to automate building and publishing on re
 
 After publishing, verify:
 
-- [ ] Package visible on PyPI: https://pypi.org/project/cos-cli/
-- [ ] `pip install cos-cli` works from fresh environment
+- [ ] Package visible on PyPI: https://pypi.org/project/tencent-cos-cli/
+- [ ] `pip install tencent-cos-cli` works from fresh environment
 - [ ] GitHub release created with proper tags
 - [ ] Release notes match CHANGELOG.md
 - [ ] Documentation links work (README, wiki, issues)

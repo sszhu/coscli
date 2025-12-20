@@ -127,13 +127,13 @@ mypy cos/
 uv pip install -e .
 
 # Uninstall
-uv pip uninstall cos-cli
+uv pip uninstall tencent-cos-cli
 
 # List installed packages
 uv pip list
 
 # Show package info
-uv pip show cos-cli
+uv pip show tencent-cos-cli
 
 # Freeze dependencies
 uv pip freeze > requirements.txt
@@ -147,7 +147,7 @@ The project now uses `pyproject.toml` instead of `setup.py`. This is the modern 
 
 ```toml
 [project]
-name = "cos-cli"
+name = "tencent-cos-cli"
 version = "1.0.0"
 dependencies = [
     "tencentcloud-sdk-python>=3.0.1000",
