@@ -22,6 +22,7 @@ from ..utils import (
     is_cos_uri,
     success_message,
     error_message,
+    should_process_file,
 )
 from ..exceptions import COSError
 
@@ -60,13 +61,13 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress):
         # Determine operation type
         if source_is_cos and not dest_is_cos:
             # Download
-            _download_files(ctx, cos_client_raw, source, destination, recursive, no_progress)
+            _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
         elif not source_is_cos and dest_is_cos:
             # Upload
-            _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progress)
+            _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
         elif source_is_cos and dest_is_cos:
             # Copy between buckets
-            _copy_objects(ctx, cos_client_raw, source, destination, recursive, no_progress)
+            _copy_objects(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
         else:
             raise COSError("At least one path must be a COS URI (cos://...)")
     
@@ -80,7 +81,7 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress):
         ctx.exit(1)
 
 
-def _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progress):
+def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
     """Upload local files to COS"""
     bucket, key = parse_cos_uri(destination)
     cos_client = COSClient(cos_client_raw, bucket)
@@ -88,7 +89,11 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progre
     source_path = Path(source)
     
     if source_path.is_file():
-        # Single file upload
+        # Single file upload - check patterns
+        if not should_process_file(source_path.name, list(include) if include else None, list(exclude) if exclude else None):
+            error_message(f"Skipping {source} (excluded by pattern)")
+            return
+        
         # If destination ends with /, append source filename
         if key and key.endswith('/'):
             target_key = key + source_path.name
@@ -116,9 +121,21 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progre
         if not recursive:
             raise COSError("Use --recursive to upload directories")
         
-        # Directory upload
+        # Directory upload - apply patterns
         files = list(source_path.rglob("*"))
         files = [f for f in files if f.is_file()]
+        
+        # Filter by patterns
+        include_patterns = list(include) if include else None
+        exclude_patterns = list(exclude) if exclude else None
+        filtered_files = [
+            f for f in files
+            if should_process_file(f.name, include_patterns, exclude_patterns)
+        ]
+        
+        if not filtered_files:
+            error_message("No files match the specified patterns")
+            return
         
         if not no_progress:
             with Progress(
@@ -127,25 +144,25 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, no_progre
                 BarColumn(),
                 TaskProgressColumn(),
             ) as progress:
-                task = progress.add_task(f"Uploading {len(files)} files...", total=len(files))
+                task = progress.add_task(f"Uploading {len(filtered_files)} files...", total=len(filtered_files))
                 
-                for file_path in files:
+                for file_path in filtered_files:
                     rel_path = file_path.relative_to(source_path)
                     dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
                     cos_client.upload_file(str(file_path), dest_key)
                     progress.update(task, advance=1)
         else:
-            for file_path in files:
+            for file_path in filtered_files:
                 rel_path = file_path.relative_to(source_path)
                 dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
                 cos_client.upload_file(str(file_path), dest_key)
         
-        success_message(f"Uploaded {len(files)} files to cos://{bucket}/{key}")
+        success_message(f"Uploaded {len(filtered_files)} files to cos://{bucket}/{key}")
     else:
         raise COSError(f"Source path does not exist: {source}")
 
 
-def _download_files(ctx, cos_client_raw, source, destination, recursive, no_progress):
+def _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
     """Download files from COS to local"""
     bucket, key = parse_cos_uri(source)
     cos_client = COSClient(cos_client_raw, bucket)
@@ -153,7 +170,12 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, no_prog
     dest_path = Path(destination)
     
     if not recursive:
-        # Single file download
+        # Single file download - check patterns
+        filename = key.split('/')[-1] if '/' in key else key
+        if not should_process_file(filename, list(include) if include else None, list(exclude) if exclude else None):
+            error_message(f"Skipping {key} (excluded by pattern)")
+            return
+        
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         
         if not no_progress:
@@ -181,9 +203,21 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, no_prog
         
         success_message(f"Downloaded cos://{bucket}/{key} to {destination}")
     else:
-        # Directory download
+        # Directory download - apply patterns
         response = cos_client.list_objects(prefix=key, delimiter="")
         objects = response.get("Contents", [])
+        
+        # Filter by patterns
+        include_patterns = list(include) if include else None
+        exclude_patterns = list(exclude) if exclude else None
+        filtered_objects = [
+            obj for obj in objects
+            if should_process_file(obj.get("Key", "").split('/')[-1], include_patterns, exclude_patterns)
+        ]
+        
+        if not filtered_objects:
+            error_message("No files match the specified patterns")
+            return
         
         if not no_progress:
             with Progress(
@@ -192,9 +226,9 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, no_prog
                 BarColumn(),
                 TaskProgressColumn(),
             ) as progress:
-                task = progress.add_task(f"Downloading {len(objects)} files...", total=len(objects))
+                task = progress.add_task(f"Downloading {len(filtered_objects)} files...", total=len(filtered_objects))
                 
-                for obj in objects:
+                for obj in filtered_objects:
                     obj_key = obj.get("Key", "")
                     rel_path = obj_key[len(key):].lstrip("/")
                     local_path = dest_path / rel_path
@@ -202,17 +236,17 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, no_prog
                     cos_client.download_file(obj_key, str(local_path))
                     progress.update(task, advance=1)
         else:
-            for obj in objects:
+            for obj in filtered_objects:
                 obj_key = obj.get("Key", "")
                 rel_path = obj_key[len(key):].lstrip("/")
                 local_path = dest_path / rel_path
                 local_path.parent.mkdir(parents=True, exist_ok=True)
                 cos_client.download_file(obj_key, str(local_path))
         
-        success_message(f"Downloaded {len(objects)} files to {destination}")
+        success_message(f"Downloaded {len(filtered_objects)} files to {destination}")
 
 
-def _copy_objects(ctx, cos_client_raw, source, destination, recursive, no_progress):
+def _copy_objects(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
     """Copy objects between COS locations"""
     source_bucket, source_key = parse_cos_uri(source)
     dest_bucket, dest_key = parse_cos_uri(destination)
@@ -220,14 +254,31 @@ def _copy_objects(ctx, cos_client_raw, source, destination, recursive, no_progre
     cos_client = COSClient(cos_client_raw)
     
     if not recursive:
-        # Single object copy
+        # Single object copy - check patterns
+        filename = source_key.split('/')[-1] if '/' in source_key else source_key
+        if not should_process_file(filename, list(include) if include else None, list(exclude) if exclude else None):
+            error_message(f"Skipping {source_key} (excluded by pattern)")
+            return
+        
         cos_client.copy_object(source_bucket, source_key, dest_bucket, dest_key)
         success_message(f"Copied cos://{source_bucket}/{source_key} to cos://{dest_bucket}/{dest_key}")
     else:
-        # Multiple objects copy
+        # Multiple objects copy - apply patterns
         source_cos = COSClient(cos_client_raw, source_bucket)
         response = source_cos.list_objects(prefix=source_key, delimiter="")
         objects = response.get("Contents", [])
+        
+        # Filter by patterns
+        include_patterns = list(include) if include else None
+        exclude_patterns = list(exclude) if exclude else None
+        filtered_objects = [
+            obj for obj in objects
+            if should_process_file(obj.get("Key", "").split('/')[-1], include_patterns, exclude_patterns)
+        ]
+        
+        if not filtered_objects:
+            error_message("No files match the specified patterns")
+            return
         
         if not no_progress:
             with Progress(
@@ -236,19 +287,19 @@ def _copy_objects(ctx, cos_client_raw, source, destination, recursive, no_progre
                 BarColumn(),
                 TaskProgressColumn(),
             ) as progress:
-                task = progress.add_task(f"Copying {len(objects)} objects...", total=len(objects))
+                task = progress.add_task(f"Copying {len(filtered_objects)} objects...", total=len(filtered_objects))
                 
-                for obj in objects:
+                for obj in filtered_objects:
                     obj_key = obj.get("Key", "")
                     rel_path = obj_key[len(source_key):].lstrip("/")
                     new_dest_key = f"{dest_key}/{rel_path}".strip("/") if dest_key else rel_path
                     cos_client.copy_object(source_bucket, obj_key, dest_bucket, new_dest_key)
                     progress.update(task, advance=1)
         else:
-            for obj in objects:
+            for obj in filtered_objects:
                 obj_key = obj.get("Key", "")
                 rel_path = obj_key[len(source_key):].lstrip("/")
                 new_dest_key = f"{dest_key}/{rel_path}".strip("/") if dest_key else rel_path
                 cos_client.copy_object(source_bucket, obj_key, dest_bucket, new_dest_key)
         
-        success_message(f"Copied {len(objects)} objects to cos://{dest_bucket}/{dest_key}")
+        success_message(f"Copied {len(filtered_objects)} objects to cos://{dest_bucket}/{dest_key}")

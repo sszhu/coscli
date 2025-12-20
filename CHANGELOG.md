@@ -5,6 +5,101 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-12-20
+
+### Added - Major Feature Release
+
+#### Advanced Bucket Management Commands
+- **`cos lifecycle` command group**: Manage bucket lifecycle policies
+  - `cos lifecycle get cos://bucket` - Retrieve lifecycle configuration
+  - `cos lifecycle put cos://bucket --config lifecycle.json` - Set lifecycle rules
+  - `cos lifecycle delete cos://bucket` - Remove lifecycle configuration
+  - Support for transition and expiration rules
+
+- **`cos policy` command group**: Manage bucket access policies
+  - `cos policy get cos://bucket` - Get bucket policy
+  - `cos policy put cos://bucket --policy policy.json` - Set access policy
+  - `cos policy delete cos://bucket` - Remove bucket policy
+  - Full IAM policy support
+
+- **`cos cors` command group**: Configure Cross-Origin Resource Sharing
+  - `cos cors get cos://bucket` - View CORS configuration
+  - `cos cors put cos://bucket --config cors.json` - Set CORS rules
+  - `cos cors delete cos://bucket` - Remove CORS configuration
+  - Configure allowed origins, methods, and headers
+
+- **`cos versioning` command group**: Manage object versioning
+  - `cos versioning get cos://bucket` - Check versioning status
+  - `cos versioning enable cos://bucket` - Enable versioning
+  - `cos versioning suspend cos://bucket` - Suspend versioning
+  - Protect against accidental deletions
+
+#### Enhanced Transfer Features
+- **Pattern Matching**: Include/exclude files in cp and sync commands
+  - `--include "*.txt"` - Include only matching files
+  - `--exclude "test_*"` - Exclude matching files
+  - Multiple patterns supported: `--include "*.py" --include "*.md"`
+  - Glob pattern support with fnmatch
+
+- **Checksum Verification**: MD5-based integrity checking
+  - `cos sync --checksum` - Use MD5 checksums for comparison
+  - Automatic multipart upload detection
+  - Compare local and remote file integrity
+  - Skip identical files even if timestamps differ
+
+- **Bandwidth Throttling**: Control transfer speeds
+  - `BandwidthThrottle` class for rate limiting
+  - Configurable max bytes per second
+  - Real-time speed monitoring
+  - Prevents network saturation
+
+- **Resume Capability**: Continue interrupted transfers
+  - `ResumeTracker` class for progress tracking
+  - Cache transfer state to disk
+  - Automatic resume on retry
+  - Clean up completed transfers
+
+#### Utility Enhancements
+- Pattern matching utilities (`matches_pattern`, `should_process_file`)
+- Checksum computation (`compute_file_checksum` for MD5, SHA1, SHA256)
+- Checksum comparison (`compare_checksums` with ETag validation)
+- Bandwidth monitoring and throttling
+- Transfer progress tracking and caching
+
+### Enhanced
+- **cp command**: Now supports --include and --exclude patterns
+  - `cos cp ./src/ cos://bucket/ -r --include "*.py" --exclude "test_*"`
+  - Filters applied to uploads, downloads, and copies
+  - Works with recursive operations
+
+- **sync command**: Enhanced with checksums and patterns
+  - `cos sync ./local/ cos://bucket/ --checksum` - Verify integrity
+  - `cos sync ./src/ cos://bucket/ --include "*.js"` - Filter files
+  - More accurate sync with MD5 comparison
+  - Pattern-based selective synchronization
+
+- **COSClient**: Added 12 new methods for advanced operations
+  - Lifecycle: get_bucket_lifecycle, put_bucket_lifecycle, delete_bucket_lifecycle
+  - Policy: get_bucket_policy, put_bucket_policy, delete_bucket_policy
+  - CORS: get_bucket_cors, put_bucket_cors, delete_bucket_cors
+  - Versioning: get_bucket_versioning, put_bucket_versioning
+
+### Testing
+- **42 new tests** for advanced features and utilities
+  - 16 tests for lifecycle, policy, CORS, versioning commands
+  - 26 tests for pattern matching, throttling, checksums
+  - **Total: 169 tests**, all passing (100%)
+
+### Documentation
+- Updated README with all new commands and examples
+- Enhanced QUICK_REFERENCE with advanced usage patterns
+- Updated COS_CLI_DEVELOPMENT_PLAN with V2.0 completion status
+- Added comprehensive inline documentation for all new functions
+- Example configuration files for lifecycle, policy, and CORS
+
+### Breaking Changes
+None - All v1.x features remain fully compatible
+
 ## [1.1.0] - 2025-12-18
 
 ### Added

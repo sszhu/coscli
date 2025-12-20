@@ -348,6 +348,158 @@ export COS_PROFILE=production
 | `rb` | Remove bucket |
 | `presign` | Generate presigned URLs for temporary access |
 | `token` | Generate temporary STS credentials |
+| `lifecycle` | Manage bucket lifecycle policies |
+| `policy` | Manage bucket access policies |
+| `cors` | Configure CORS settings |
+| `versioning` | Manage bucket versioning |
+
+## Advanced Commands
+
+### Bucket Lifecycle Management
+
+Control automatic transitions and expiration of objects:
+
+```bash
+# View lifecycle rules
+cos lifecycle get cos://my-bucket
+
+# Set lifecycle rules from JSON file
+cos lifecycle put cos://my-bucket --config lifecycle.json
+
+# Delete lifecycle configuration
+cos lifecycle delete cos://my-bucket
+```
+
+**Example lifecycle.json**:
+```json
+{
+  "Rule": [
+    {
+      "ID": "Delete old logs",
+      "Status": "Enabled",
+      "Filter": {"Prefix": "logs/"},
+      "Expiration": {"Days": 30}
+    },
+    {
+      "ID": "Archive to ARCHIVE",
+      "Status": "Enabled",
+      "Filter": {"Prefix": "archive/"},
+      "Transition": {
+        "Days": 90,
+        "StorageClass": "ARCHIVE"
+      }
+    }
+  ]
+}
+```
+
+### Bucket Policy Management
+
+Control access permissions at bucket level:
+
+```bash
+# View current policy
+cos policy get cos://my-bucket
+
+# Set policy from JSON file
+cos policy put cos://my-bucket --policy policy.json
+
+# Delete policy
+cos policy delete cos://my-bucket
+```
+
+**Example policy.json**:
+```json
+{
+  "version": "2.0",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {"qcs": ["qcs::cam::uin/100000000001:uin/100000000001"]},
+      "Action": ["name/cos:GetObject"],
+      "Resource": ["qcs::cos:ap-shanghai:uid/1250000000:my-bucket/*"]
+    }
+  ]
+}
+```
+
+### CORS Configuration
+
+Configure Cross-Origin Resource Sharing:
+
+```bash
+# View CORS rules
+cos cors get cos://my-bucket
+
+# Set CORS rules from JSON file
+cos cors put cos://my-bucket --config cors.json
+
+# Delete CORS configuration
+cos cors delete cos://my-bucket
+```
+
+**Example cors.json**:
+```json
+{
+  "CORSRule": [
+    {
+      "ID": "Allow all origins",
+      "AllowedOrigin": ["*"],
+      "AllowedMethod": ["GET", "PUT", "POST", "DELETE", "HEAD"],
+      "AllowedHeader": ["*"],
+      "ExposeHeader": ["ETag", "Content-Length"],
+      "MaxAgeSeconds": 3600
+    }
+  ]
+}
+```
+
+### Bucket Versioning
+
+Enable object versioning for protection:
+
+```bash
+# Check versioning status
+cos versioning get cos://my-bucket
+
+# Enable versioning
+cos versioning enable cos://my-bucket
+
+# Suspend versioning
+cos versioning suspend cos://my-bucket
+```
+
+### Pattern Matching
+
+Filter files during transfer operations:
+
+```bash
+# Upload only Python files
+cos cp ./project/ cos://bucket/code/ -r --include "*.py"
+
+# Upload all except tests
+cos cp ./project/ cos://bucket/code/ -r --exclude "test_*"
+
+# Complex patterns: include source files, exclude tests and cache
+cos cp ./project/ cos://bucket/backup/ -r \
+  --include "*.py" --include "*.js" \
+  --exclude "test_*" --exclude "__pycache__"
+
+# Download only log files
+cos cp cos://bucket/logs/ ./local-logs/ -r --include "*.log"
+```
+
+### Checksum Verification
+
+Ensure data integrity with MD5 checksums:
+
+```bash
+# Sync with checksum verification
+cos sync ./local/ cos://bucket/remote/ --checksum
+
+# Even if timestamps differ, skip files with matching checksums
+cos sync ./local/ cos://bucket/remote/ --checksum --size-only
+```
 
 ## Examples
 

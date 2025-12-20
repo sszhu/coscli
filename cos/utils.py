@@ -2,10 +2,14 @@
 
 import json
 import os
+import time
+import fnmatch
+import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Callable
 from urllib.parse import urlparse
+import threading
 
 from rich.console import Console
 from rich.table import Table
@@ -262,3 +266,219 @@ def info_message(message: str) -> None:
         message: Info message
     """
     console.print(f"[bold blue]ℹ[/bold blue] {message}")
+
+def matches_pattern(path: str, patterns: List[str], is_include: bool = True) -> bool:
+    """
+    Check if path matches any of the given patterns.
+    
+    Args:
+        path: File path to check
+        patterns: List of glob patterns
+        is_include: True for include patterns, False for exclude
+        
+    Returns:
+        True if path matches (for include) or doesn't match (for exclude)
+    """
+    if not patterns:
+        return True if is_include else False
+    
+    for pattern in patterns:
+        if fnmatch.fnmatch(path, pattern):
+            return True
+    return False
+
+
+def should_process_file(
+    path: str,
+    include_patterns: Optional[List[str]] = None,
+    exclude_patterns: Optional[List[str]] = None
+) -> bool:
+    """
+    Determine if a file should be processed based on include/exclude patterns.
+    
+    Args:
+        path: File path to check
+        include_patterns: List of include patterns (if specified, only matching files are included)
+        exclude_patterns: List of exclude patterns (matching files are excluded)
+        
+    Returns:
+        True if file should be processed
+    """
+    # If include patterns specified, file must match at least one
+    if include_patterns and not matches_pattern(path, include_patterns, True):
+        return False
+    
+    # If exclude patterns specified, file must not match any
+    if exclude_patterns and matches_pattern(path, exclude_patterns, True):
+        return False
+    
+    return True
+
+
+class BandwidthThrottle:
+    """Throttle bandwidth for uploads/downloads"""
+    
+    def __init__(self, max_bytes_per_sec: Optional[int] = None):
+        """
+        Initialize bandwidth throttle.
+        
+        Args:
+            max_bytes_per_sec: Maximum bytes per second (None = no limit)
+        """
+        self.max_bytes_per_sec = max_bytes_per_sec
+        self.bytes_transferred = 0
+        self.start_time = time.time()
+        self._lock = threading.Lock()
+    
+    def throttle(self, chunk_size: int) -> None:
+        """
+        Apply throttle based on bytes transferred.
+        
+        Args:
+            chunk_size: Size of chunk being transferred
+        """
+        if self.max_bytes_per_sec is None:
+            return
+        
+        with self._lock:
+            self.bytes_transferred += chunk_size
+            elapsed = time.time() - self.start_time
+            expected_time = self.bytes_transferred / self.max_bytes_per_sec
+            
+            if expected_time > elapsed:
+                time.sleep(expected_time - elapsed)
+    
+    def get_speed(self) -> float:
+        """
+        Get current transfer speed in bytes per second.
+        
+        Returns:
+            Transfer speed
+        """
+        elapsed = time.time() - self.start_time
+        if elapsed == 0:
+            return 0
+        return self.bytes_transferred / elapsed
+
+
+class ResumeTracker:
+    """Track transfer progress for resume capability"""
+    
+    def __init__(self, cache_dir: Optional[Path] = None):
+        """
+        Initialize resume tracker.
+        
+        Args:
+            cache_dir: Directory to store progress cache (default: ~/.cos/cache)
+        """
+        if cache_dir is None:
+            cache_dir = Path.home() / ".cos" / "cache"
+        self.cache_dir = cache_dir
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+    
+    def get_cache_file(self, file_path: str, operation: str) -> Path:
+        """Get cache file path for a transfer"""
+        file_hash = hashlib.md5(f"{file_path}{operation}".encode()).hexdigest()
+        return self.cache_dir / f"{file_hash}.json"
+    
+    def save_progress(self, file_path: str, operation: str, data: Dict) -> None:
+        """
+        Save progress for a transfer.
+        
+        Args:
+            file_path: File being transferred
+            operation: Operation type (upload/download)
+            data: Progress data to save
+        """
+        cache_file = self.get_cache_file(file_path, operation)
+        with open(cache_file, 'w') as f:
+            json.dump({
+                'file_path': file_path,
+                'operation': operation,
+                'timestamp': datetime.now().isoformat(),
+                'data': data
+            }, f)
+    
+    def load_progress(self, file_path: str, operation: str) -> Optional[Dict]:
+        """
+        Load progress for a transfer.
+        
+        Args:
+            file_path: File being transferred
+            operation: Operation type (upload/download)
+            
+        Returns:
+            Progress data or None if not found
+        """
+        cache_file = self.get_cache_file(file_path, operation)
+        if not cache_file.exists():
+            return None
+        
+        try:
+            with open(cache_file, 'r') as f:
+                return json.load(f)
+        except Exception:
+            return None
+    
+    def clear_progress(self, file_path: str, operation: str) -> None:
+        """
+        Clear progress for a completed transfer.
+        
+        Args:
+            file_path: File being transferred
+            operation: Operation type (upload/download)
+        """
+        cache_file = self.get_cache_file(file_path, operation)
+        if cache_file.exists():
+            cache_file.unlink()
+
+
+def compute_file_checksum(file_path: str, algorithm: str = "md5") -> str:
+    """
+    Compute checksum of a file.
+    
+    Args:
+        file_path: Path to file
+        algorithm: Hash algorithm (md5, sha1, sha256)
+        
+    Returns:
+        Hex digest of checksum
+    """
+    if algorithm == "md5":
+        hasher = hashlib.md5()
+    elif algorithm == "sha1":
+        hasher = hashlib.sha1()
+    elif algorithm == "sha256":
+        hasher = hashlib.sha256()
+    else:
+        raise ValueError(f"Unsupported algorithm: {algorithm}")
+    
+    with open(file_path, 'rb') as f:
+        for chunk in iter(lambda: f.read(8192), b''):
+            hasher.update(chunk)
+    
+    return hasher.hexdigest()
+
+
+def compare_checksums(local_path: str, remote_etag: str) -> bool:
+    """
+    Compare local file checksum with remote ETag.
+    
+    Args:
+        local_path: Path to local file
+        remote_etag: ETag from COS (typically MD5)
+        
+    Returns:
+        True if checksums match
+    """
+    # Remove quotes from ETag if present
+    remote_etag = remote_etag.strip('"')
+    
+    # For multipart uploads, ETag is not a simple MD5
+    # If ETag contains '-', it's a multipart upload
+    if '-' in remote_etag:
+        # Can't reliably compare multipart ETags
+        return False
+    
+    local_md5 = compute_file_checksum(local_path, "md5")
+    return local_md5 == remote_etag

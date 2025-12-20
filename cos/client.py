@@ -285,3 +285,239 @@ class COSClient:
             return response
         except Exception as e:
             self._handle_error(e)
+    
+    def get_bucket_lifecycle(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Get bucket lifecycle configuration.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary with lifecycle rules
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.get_bucket_lifecycle(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def put_bucket_lifecycle(self, lifecycle_config: Dict, bucket: Optional[str] = None) -> Dict:
+        """
+        Set bucket lifecycle configuration.
+        
+        Args:
+            lifecycle_config: Lifecycle configuration dictionary
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.put_bucket_lifecycle(
+                Bucket=bucket,
+                LifecycleConfiguration=lifecycle_config
+            )
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def delete_bucket_lifecycle(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Delete bucket lifecycle configuration.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.delete_bucket_lifecycle(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def get_bucket_policy(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Get bucket policy.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary with policy
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.get_bucket_policy(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def put_bucket_policy(self, policy: str, bucket: Optional[str] = None) -> Dict:
+        """
+        Set bucket policy.
+        
+        Args:
+            policy: Policy JSON string
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.put_bucket_policy(
+                Bucket=bucket,
+                Policy=policy
+            )
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def delete_bucket_policy(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Delete bucket policy.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.delete_bucket_policy(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def get_bucket_cors(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Get bucket CORS configuration.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary with CORS rules
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.get_bucket_cors(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def put_bucket_cors(self, cors_config: Dict, bucket: Optional[str] = None) -> Dict:
+        """
+        Set bucket CORS configuration.
+        
+        Args:
+            cors_config: CORS configuration dictionary
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.put_bucket_cors(
+                Bucket=bucket,
+                CORSConfiguration=cors_config
+            )
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def delete_bucket_cors(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Delete bucket CORS configuration.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.delete_bucket_cors(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def get_bucket_versioning(self, bucket: Optional[str] = None) -> Dict:
+        """
+        Get bucket versioning status.
+        
+        Args:
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary with versioning status
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.get_bucket_versioning(Bucket=bucket)
+            return response
+        except Exception as e:
+            self._handle_error(e)
+    
+    def put_bucket_versioning(self, status: str, bucket: Optional[str] = None) -> Dict:
+        """
+        Set bucket versioning status.
+        
+        Args:
+            status: Versioning status ('Enabled' or 'Suspended')
+            bucket: Bucket name (uses default if not provided)
+            
+        Returns:
+            Response dictionary
+        """
+        bucket = bucket or self.bucket
+        if not bucket:
+            raise COSError("Bucket name is required")
+        
+        try:
+            response = self.client.put_bucket_versioning(
+                Bucket=bucket,
+                Status=status
+            )
+            return response
+        except Exception as e:
+            self._handle_error(e)

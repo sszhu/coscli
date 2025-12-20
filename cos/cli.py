@@ -3,7 +3,7 @@
 import click
 
 from .config import ConfigManager
-from .commands import configure, ls, cp, rm, mb, rb, token, mv, presign, sync
+from .commands import configure, ls, cp, rm, mb, rb, token, mv, presign, sync, lifecycle, policy, cors, versioning
 from . import __version__
 
 
@@ -56,6 +56,10 @@ cli.add_command(mb.mb)
 cli.add_command(rb.rb)
 cli.add_command(presign.presign)
 cli.add_command(token.token)
+cli.add_command(lifecycle.lifecycle)
+cli.add_command(policy.policy)
+cli.add_command(cors.cors)
+cli.add_command(versioning.versioning)
 
 
 def main():

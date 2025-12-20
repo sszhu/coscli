@@ -15,6 +15,8 @@ from ..utils import (
     error_message,
     info_message,
     format_size,
+    should_process_file,
+    compare_checksums,
 )
 from ..exceptions import COSError
 
@@ -53,7 +55,8 @@ def get_cos_files(cos_client, prefix=""):
         files[relative_key] = {
             "size": obj["Size"],
             "mtime": datetime.fromisoformat(obj["LastModified"].replace('Z', '+00:00')).timestamp(),
-            "key": key
+            "key": key,
+            "etag": obj.get("ETag", "").strip('"')  # Add ETag for checksum comparison
         }
     
     return files
@@ -65,17 +68,22 @@ def get_cos_files(cos_client, prefix=""):
 @click.option("--delete", is_flag=True, help="Delete files in destination not in source")
 @click.option("--dryrun", "-n", is_flag=True, help="Show what would be done without doing it")
 @click.option("--size-only", is_flag=True, help="Skip files with same size (faster)")
+@click.option("--checksum", is_flag=True, help="Use checksums for comparison (slower but accurate)")
+@click.option("--include", multiple=True, help="Include files matching pattern")
+@click.option("--exclude", multiple=True, help="Exclude files matching pattern")
 @click.pass_context
-def sync(ctx, source, destination, delete, dryrun, size_only):
+def sync(ctx, source, destination, delete, dryrun, size_only, checksum, include, exclude):
     """
     Synchronize directories between local and COS.
 
     \b
     Examples:
-      cos sync ./local/ cos://bucket/path/        # Upload local to COS
-      cos sync cos://bucket/path/ ./local/        # Download COS to local
-      cos sync ./local/ cos://bucket/ --delete    # Sync and delete extras
-      cos sync ./local/ cos://bucket/ --dryrun    # Preview changes
+      cos sync ./local/ cos://bucket/path/          # Upload local to COS
+      cos sync cos://bucket/path/ ./local/          # Download COS to local
+      cos sync ./local/ cos://bucket/ --delete      # Sync and delete extras
+      cos sync ./local/ cos://bucket/ --dryrun      # Preview changes
+      cos sync ./local/ cos://bucket/ --checksum    # Use MD5 checksums
+      cos sync ./local/ cos://bucket/ --include "*.txt"  # Only .txt files
     """
     try:
         # Determine sync direction
@@ -111,6 +119,15 @@ def sync(ctx, source, destination, delete, dryrun, size_only):
             local_files = get_local_files(source)
             cos_files = get_cos_files(cos_client, prefix)
             
+            # Apply patterns
+            include_patterns = list(include) if include else None
+            exclude_patterns = list(exclude) if exclude else None
+            if include_patterns or exclude_patterns:
+                local_files = {
+                    k: v for k, v in local_files.items()
+                    if should_process_file(k, include_patterns, exclude_patterns)
+                }
+            
             upload_count = 0
             delete_count = 0
             skip_count = 0
@@ -124,6 +141,12 @@ def sync(ctx, source, destination, delete, dryrun, size_only):
                 if rel_path not in cos_files:
                     needs_upload = True
                     info_message(f"NEW: {rel_path}")
+                elif checksum:
+                    # Use MD5 checksum comparison
+                    cos_etag = cos_files[rel_path].get("etag", "")
+                    if not compare_checksums(local_info["path"], cos_etag):
+                        needs_upload = True
+                        info_message(f"CHECKSUM DIFF: {rel_path}")
                 elif size_only:
                     if local_info["size"] != cos_files[rel_path]["size"]:
                         needs_upload = True
@@ -171,6 +194,15 @@ def sync(ctx, source, destination, delete, dryrun, size_only):
             cos_files = get_cos_files(cos_client, prefix)
             local_files = get_local_files(destination)
             
+            # Apply patterns
+            include_patterns = list(include) if include else None
+            exclude_patterns = list(exclude) if exclude else None
+            if include_patterns or exclude_patterns:
+                cos_files = {
+                    k: v for k, v in cos_files.items()
+                    if should_process_file(k, include_patterns, exclude_patterns)
+                }
+            
             download_count = 0
             delete_count = 0
             skip_count = 0
@@ -184,6 +216,14 @@ def sync(ctx, source, destination, delete, dryrun, size_only):
                 if rel_path not in local_files:
                     needs_download = True
                     info_message(f"NEW: {rel_path}")
+                elif checksum:
+                    # Use MD5 checksum comparison
+                    if local_path.exists():
+                        if not compare_checksums(str(local_path), cos_info.get("etag", "")):
+                            needs_download = True
+                            info_message(f"CHECKSUM DIFF: {rel_path}")
+                    else:
+                        needs_download = True
                 elif size_only:
                     if cos_info["size"] != local_files[rel_path]["size"]:
                         needs_download = True
