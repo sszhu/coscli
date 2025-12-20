@@ -1,5 +1,9 @@
 # Tencent COS CLI
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-169%20passing-success.svg)](tests/)
+
 A powerful command-line interface for Tencent Cloud Object Storage (COS), designed with a similar experience to AWS CLI.
 
 ## Features
@@ -604,6 +608,26 @@ MIT License - see LICENSE file for details
 
 See [CHANGELOG.md](CHANGELOG.md) for version history.
 
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+### What This Means
+
+✅ **You can:**
+- Use this software for commercial purposes
+- Modify and distribute the software
+- Use it privately
+- Sublicense it
+
+⚠️ **You must:**
+- Include the original copyright notice
+- Include the MIT License text
+
+❌ **Limitations:**
+- No warranty provided
+- Authors are not liable for any claims
+
 ## Credits
 
 Built with:
@@ -611,3 +635,9 @@ Built with:
 - [Click](https://click.palletsprojects.com/) - CLI framework
 - [Rich](https://rich.readthedocs.io/) - Beautiful terminal output
 - [Tencent Cloud SDK](https://cloud.tencent.com/document/sdk/Python) - Official SDK
+
+## Author
+
+**Shanshan Zhu**
+
+Contributions are welcome! Please feel free to submit a Pull Request.
