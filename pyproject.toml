@@ -39,6 +39,7 @@ dependencies = [
     "pylint>=3.2.7",
     "pytest>=8.3.5",
     "pip>=25.0.1",
+    "twine>=6.1.0",
 ]
 
 [project.urls]
