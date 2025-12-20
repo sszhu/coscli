@@ -1,0 +1,17 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include pyproject.toml
+recursive-include cos *.py
+recursive-include tests *.py
+recursive-exclude tests __pycache__
+recursive-exclude tests *.pyc
+recursive-exclude cos __pycache__
+recursive-exclude cos *.pyc
+prune .git
+prune .pytest_cache
+prune .venv
+prune build
+prune dist
+prune *.egg-info

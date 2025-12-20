@@ -58,12 +58,6 @@ dev = [
     "mypy>=1.5.0",
 ]
 
-[project.urls]
-Homepage = "https://github.com/sszhu/cos-cli"
-Documentation = "https://github.com/sszhu/cos-cli/wiki"
-Repository = "https://github.com/sszhu/cos-cli"
-"Bug Tracker" = "https://github.com/sszhu/cos-cli/issues"
-
 [project.scripts]
 cos = "cos.cli:main"
 
