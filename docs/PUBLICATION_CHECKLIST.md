@@ -71,16 +71,17 @@ source .venv/bin/activate
 # Clean previous builds
 rm -rf dist/ build/ *.egg-info
 
-# Build package
-python -m build
-# or with uv:
-# uv build
+# Build package (recommended: use uv for SSL compatibility)
+uv build --native-tls
+
+# Alternative: traditional build (may fail with SSL issues)
+# python -m build
 
 # Verify build artifacts
 ls -lh dist/
 # Should see:
-# - tencent-cos-cli-2.0.0.tar.gz
-# - tencentcloud_cos_cli-2.0.0-py3-none-any.whl
+# - tencent_cos_cli-2.0.0.tar.gz
+# - tencent_cos_cli-2.0.0-py3-none-any.whl
 ```
 
 ### 2. Test Installation Locally
@@ -91,7 +92,7 @@ python -m venv test_env
 source test_env/bin/activate
 
 # Install from wheel
-pip install dist/tencentcloud_cos_cli-2.0.0-py3-none-any.whl
+pip install dist/tencent_cos_cli-2.0.0-py3-none-any.whl
 
 # Test installation
 cos --version  # Should show: cos, version 2.0.0
@@ -305,8 +306,8 @@ MIT License - see [LICENSE](https://github.com/sszhu/coscli/blob/main/LICENSE) f
 ```
 
 **Attach Files:**
-- Upload `dist/tencent-cos-cli-2.0.0.tar.gz`
-- Upload `dist/tencentcloud_cos_cli-2.0.0-py3-none-any.whl`
+- Upload `dist/tencent_cos_cli-2.0.0.tar.gz`
+- Upload `dist/tencent_cos_cli-2.0.0-py3-none-any.whl`
 
 ### 4. Update Repository Settings (Optional)
 

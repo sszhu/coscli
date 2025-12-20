@@ -75,13 +75,17 @@ The current environment has SSL certificate verification issues (self-signed cer
 
 3. **Build the package**:
    ```bash
-   python -m pip install build twine
-   python -m build
+   # Recommended: Use uv (handles SSL issues)
+   uv build --native-tls
+   
+   # Alternative: Traditional build (may fail with SSL issues on corporate networks)
+   # python -m pip install build
+   # python -m build
    ```
    
    This creates:
-   - `dist/tencentcloud_cos_cli-2.0.0.tar.gz` (source distribution)
-   - `dist/tencentcloud_cos_cli-2.0.0-py3-none-any.whl` (wheel)
+   - `dist/tencent_cos_cli-2.0.0.tar.gz` (source distribution)
+   - `dist/tencent_cos_cli-2.0.0-py3-none-any.whl` (wheel)
 
 4. **Test the build locally**:
    ```bash
