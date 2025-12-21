@@ -12,7 +12,7 @@ This project follows a simple code of conduct: be respectful, be constructive, a
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/YOUR-USERNAME/coscli.git
+   git clone https://github.com/sszhu/coscli.git
    cd coscli
    ```
 

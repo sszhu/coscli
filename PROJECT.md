@@ -11,10 +11,11 @@ A fast, intuitive CLI tool for managing Tencent Cloud Object Storage, built with
 ## ⚡ Quick Start
 
 ```bash
-# Install (auto-installs uv if needed)
-./install.sh
+# Install from PyPI (recommended)
+pip install tencent-cos-cli
 
-# Activate environment
+# Or install from source
+./install.sh
 source .venv/bin/activate
 
 # Configure credentials
@@ -70,12 +71,13 @@ coscli/
 
 ## 🚀 Features
 
-- ✨ **Modern**: Uses uv for 10-100x faster package management
-- 🎯 **Simple**: AWS CLI-like syntax
-- 🔐 **Secure**: STS credentials, role assumption
+- ✨ **Modern**: Published on PyPI, uses uv for fast development
+- 🎯 **Simple**: AWS CLI-like syntax, 14 powerful commands
+- 🔐 **Secure**: STS credentials, pre-signed URLs, IAM policies
 - 🎨 **Beautiful**: Rich progress bars, colored output
 - 📦 **Complete**: Upload, download, sync, bucket management
-- ⚙️ **Flexible**: Multiple profiles, regions, output formats
+- ⚙️ **Flexible**: Pattern matching, checksums, multiple profiles
+- 🚀 **Advanced**: Lifecycle, CORS, versioning, policy management
 
 ## 📦 Commands
 
@@ -83,10 +85,18 @@ coscli/
 |---------|-------------|
 | `cos configure` | Setup credentials |
 | `cos ls` | List buckets/objects |
-| `cos cp` | Copy files |
+| `cos cp` | Copy files (with --include/--exclude) |
+| `cos mv` | Move/rename objects |
+| `cos sync` | Synchronize directories (with --checksum) |
 | `cos rm` | Remove objects |
 | `cos mb` | Create bucket |
 | `cos rb` | Remove bucket |
+| `cos presign` | Generate pre-signed URLs |
+| `cos token` | Generate temporary credentials |
+| `cos lifecycle` | Manage lifecycle policies |
+| `cos policy` | Manage bucket policies |
+| `cos cors` | Configure CORS |
+| `cos versioning` | Manage versioning |
 
 ## 🛠️ Development
 
@@ -106,7 +116,7 @@ ruff check cos/
 
 ## 📝 Version
 
-Current version: **1.0.2**
+Current version: **2.0.1**
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

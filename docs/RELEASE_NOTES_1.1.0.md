@@ -248,9 +248,9 @@ Special thanks to all contributors and testers who helped make this release poss
 
 ## Support
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/coscli/issues)
+- **Issues**: [GitHub Issues](https://github.com/sszhu/coscli/issues)
 - **Documentation**: [docs/](../docs/)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/coscli/discussions)
+- **Discussions**: [GitHub Discussions](https://github.com/sszhu/coscli/discussions)
 
 ## Feedback
 

@@ -182,7 +182,7 @@ git push origin v2.0.1
 ### 4. Create GitHub Release
 
 After successful PyPI upload:
-1. Go to https://github.com/yourusername/coscli/releases
+1. Go to https://github.com/sszhu/coscli/releases
 2. Create new release from tag
 3. Add release notes from CHANGELOG
 

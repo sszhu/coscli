@@ -471,7 +471,7 @@ cos --version  # Should show 2.0.0
 
 ### Fresh Install
 ```bash
-git clone https://github.com/yourusername/coscli.git
+git clone https://github.com/sszhu/coscli.git
 cd coscli
 ./install.sh
 cos configure

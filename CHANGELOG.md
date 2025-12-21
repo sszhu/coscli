@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2025-12-21
+
+### Added
+- **PyPI Package**: Now published on PyPI as `tencent-cos-cli`
+- Installation via pip: `pip install tencent-cos-cli`
+- Comprehensive release documentation for first public release
+- [Token Usage Guide](docs/TOKEN_USAGE_GUIDE.md) with CI/CD examples
+- [PyPI Upload Guide](PYPI_UPLOAD_GUIDE.md) for maintainers
+
+### Fixed
+- **cp command**: Fixed destination handling for paths with trailing slash
+  - Files uploaded to `cos://bucket/path/` now correctly create `path/filename`
+  - Previously would create directory object instead of file
+- **Help formatting**: Fixed indentation in all command help texts
+  - All examples now display with proper 2-space indentation
+  - Line breaks preserved correctly using Click's `\b` marker
+- **token command**: Fixed environment variable output for sourcing
+  - Info messages now go to stderr when `--output env`
+  - Clean stdout allows: `cos token --output env > creds.sh && source creds.sh`
+
+### Enhanced
+- Data backup/restore script with Tencent COS support
+- Multi-provider backup (AWS S3 + Tencent COS)
+- SSL bypass helper for corporate network uploads
+- Improved error messages and user feedback
+- Documentation organization and completeness
+
+### Documentation
+- Added pip installation as recommended method in README
+- Created comprehensive release notes for v2.0.1
+- Updated all documentation with PyPI installation instructions
+- Added contributing guidelines
+
 ## [2.0.0] - 2025-12-20
 
 ### Added - Major Feature Release
