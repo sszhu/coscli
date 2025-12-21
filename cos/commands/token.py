@@ -61,7 +61,11 @@ def token(ctx, duration, profile, output):
         region = ctx.obj.get("region") or config_manager.get_region()
         
         # Generate token
-        info_message(f"Generating temporary credentials (duration: {duration}s)...")
+        # For env output, send info messages to stderr so stdout is clean
+        if output == "env":
+            click.echo(f"ℹ Generating temporary credentials (duration: {duration}s)...", err=True)
+        else:
+            info_message(f"Generating temporary credentials (duration: {duration}s)...")
         
         sts_manager = STSTokenManager(secret_id, secret_key, assume_role)
         sts_manager.sts_duration = duration  # Override default duration
@@ -73,7 +77,7 @@ def token(ctx, duration, profile, output):
         
         # Format output
         if output == "env":
-            # Output as environment variables
+            # Output as environment variables (stdout only, no decorations)
             click.echo("# Export these environment variables to use temporary credentials")
             click.echo(f"export COS_SECRET_ID='{temp_creds['tmp_secret_id']}'")
             click.echo(f"export COS_SECRET_KEY='{temp_creds['tmp_secret_key']}'")
@@ -105,7 +109,11 @@ def token(ctx, duration, profile, output):
             ]
             format_output(data, "table")
         
-        success_message("Temporary credentials generated successfully")
+        # Success message to stderr for env output, normal for others
+        if output == "env":
+            click.echo("✓ Temporary credentials generated successfully", err=True)
+        else:
+            success_message("Temporary credentials generated successfully")
         
         # Provide usage hint
         if output != "env":
