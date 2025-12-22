@@ -1,8 +1,8 @@
 # Tencent COS CLI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](CHANGELOG.md)
-[![Tests](https://img.shields.io/badge/tests-169%20passing-success.svg)](tests/)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-196%20passing-success.svg)](tests/)
 
 A powerful command-line interface for Tencent Cloud Object Storage (COS), designed with a similar experience to AWS CLI.
 
@@ -109,15 +109,30 @@ You'll be prompted for:
 
 For testing or temporary access:
 ```bash
-# Generate 2-hour temporary token
+# Generate 2-hour temporary token (basic)
 cos token
 
-# Use environment variables
+# Generate 1-hour token
+cos token --duration 3600
+
+# Generate prefix-restricted token (scoped access)
+cos token --bucket mybucket-1234567890 --prefix "data/uploads"
+
+# Generate read-only token for specific prefix
+cos token --bucket mybucket-1234567890 --prefix "reports" --read-only
+
+# Specify custom region and actions
+cos token --bucket mybucket-1234567890 --region ap-shanghai \
+          --action GetObject --action PutObject
+
+# Export as environment variables for immediate use
 cos token --output env > temp_creds.sh
 source temp_creds.sh
 ```
 
-**📖 More details**: [docs/TOKEN_MANAGEMENT.md](docs/TOKEN_MANAGEMENT.md)
+**📖 More details**: 
+- [docs/TOKEN_USAGE_GUIDE.md](docs/TOKEN_USAGE_GUIDE.md) - Token management and CI/CD integration
+- [docs/STS_PREFIX_ACCESS_GUIDE.md](docs/STS_PREFIX_ACCESS_GUIDE.md) - Prefix-restricted access
 
 ### 2. Basic Commands
 
@@ -335,6 +350,19 @@ export COS_ASSUME_ROLE=qcs::cam::uin/xxx:roleName/xxx
 export COS_OUTPUT=json
 export COS_PROFILE=production
 ```
+
+### Credential Precedence
+
+When multiple credential sources are configured, the CLI follows a specific precedence order:
+
+1. **Environment Temporary Token** (`COS_TOKEN` + `COS_SECRET_ID` + `COS_SECRET_KEY`)
+2. **Config File Temporary Token** (via `cos configure import-token`)
+3. **STS via Assume Role** (`assume_role` in config file)
+4. **Permanent Credentials** (config file or environment variables)
+
+**Important:** When `COS_TOKEN` is set in environment, all config file settings (including `assume_role`) are ignored to prevent conflicts.
+
+📖 **See [Credential Precedence Guide](docs/CREDENTIAL_PRECEDENCE.md) for detailed rules and troubleshooting.**
 
 ## Command Reference
 

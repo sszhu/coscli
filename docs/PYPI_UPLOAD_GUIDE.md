@@ -73,12 +73,12 @@ cos --version
 
 Edit `cos/__init__.py`:
 ```python
-__version__ = "2.0.1"  # Increment version
+__version__ = "2.2.0"  # Current version
 ```
 
 Edit `pyproject.toml`:
 ```toml
-version = "2.0.1"  # Match __init__.py
+version = "2.2.0"  # Match __init__.py
 ```
 
 ### Rebuild

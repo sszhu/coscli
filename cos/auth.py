@@ -57,12 +57,19 @@ class STSTokenManager:
         self._cached_credentials: Optional[Dict[str, str]] = None
         self._expiration: Optional[float] = None
     
-    def get_temp_credentials(self, region: str = "ap-shanghai") -> Dict[str, str]:
+    def get_temp_credentials(
+        self, 
+        region: str = "ap-shanghai",
+        policy: Optional[Dict] = None,
+        policy_str: Optional[str] = None
+    ) -> Dict[str, str]:
         """
         Get temporary credentials via STS.
         
         Args:
             region: Region for STS endpoint
+            policy: Policy document as dict (for prefix restrictions)
+            policy_str: Policy document as JSON string
             
         Returns:
             Dictionary containing temporary credentials
@@ -70,8 +77,9 @@ class STSTokenManager:
         Raises:
             AuthenticationError: If authentication fails
         """
-        # Return cached credentials if still valid
-        if self._cached_credentials and self._expiration:
+        # Return cached credentials if still valid and policy matches
+        # Note: We don't cache when policy is provided to ensure fresh scoped credentials
+        if self._cached_credentials and self._expiration and not policy and not policy_str:
             if time.time() < self._expiration - 300:  # 5 min buffer
                 return self._cached_credentials
         
@@ -99,6 +107,13 @@ class STSTokenManager:
                 "RoleSessionName": "tencent-cos-cli-session",
                 "DurationSeconds": self.sts_duration,
             }
+            
+            # Add policy if provided
+            if policy:
+                params["Policy"] = json.dumps(policy)
+            elif policy_str:
+                params["Policy"] = policy_str
+            
             req.from_json_string(json.dumps(params))
             
             # Get response
@@ -142,6 +157,12 @@ class COSAuthenticator:
         """
         Authenticate and create COS client.
         
+        Credential Sources (in precedence order):
+        1. Environment temp credentials (COS_TOKEN + COS_SECRET_ID + COS_SECRET_KEY)
+        2. Config file temp token (from 'cos configure import-token')
+        3. STS via assume_role (config file)
+        4. Permanent credentials (config file or env)
+        
         Args:
             region: Region (overrides config)
             verify_ssl: Whether to verify SSL certificates
@@ -153,19 +174,22 @@ class COSAuthenticator:
             AuthenticationError: If authentication fails
         """
         try:
-            # Get credentials
+            # Get credentials (with precedence rules applied)
             credentials = self.config_manager.get_credentials()
             secret_id = credentials["secret_id"]
             secret_key = credentials["secret_key"]
             assume_role = credentials.get("assume_role")
             temp_token = credentials.get("token")
+            cred_source = credentials.get("_source", "unknown")
             
             # Get region
             if region is None:
                 region = self.config_manager.get_region()
             
-            # Use temporary token if available (from import-token)
+            # Branch based on credential source
             if temp_token:
+                # Mode 1 or 2a: Using temporary token (from env or config file)
+                # This takes precedence over assume_role
                 config = CosConfig(
                     Region=region,
                     SecretId=secret_id,
@@ -173,8 +197,8 @@ class COSAuthenticator:
                     Token=temp_token,
                     Scheme=DEFAULT_SCHEME,
                 )
-            # Use STS if assume_role is provided
             elif assume_role:
+                # Mode 2b: Use STS with assume_role
                 if not self.sts_manager:
                     self.sts_manager = STSTokenManager(secret_id, secret_key, assume_role)
                 
@@ -189,7 +213,7 @@ class COSAuthenticator:
                     Scheme=DEFAULT_SCHEME,
                 )
             else:
-                # Create COS config with permanent credentials
+                # Mode 3: Use permanent credentials
                 config = CosConfig(
                     Region=region,
                     SecretId=secret_id,

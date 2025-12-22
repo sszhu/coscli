@@ -51,6 +51,38 @@ def parse_cos_uri(uri: str) -> tuple[str, str]:
     return bucket, key
 
 
+def validate_bucket_name(bucket: str) -> bool:
+    """
+    Validate Tencent COS bucket name.
+    
+    Bucket naming rules:
+    - Length: 1-50 characters
+    - Can contain lowercase letters, numbers, and hyphens
+    - Must start and end with lowercase letter or number
+    - Cannot contain consecutive hyphens
+    
+    Args:
+        bucket: Bucket name to validate
+        
+    Returns:
+        True if valid, False otherwise
+    """
+    import re
+    
+    if not bucket or len(bucket) < 1 or len(bucket) > 50:
+        return False
+    
+    # Check pattern: lowercase alphanumeric and hyphens
+    if not re.match(r'^[a-z0-9][a-z0-9-]*[a-z0-9]$', bucket):
+        return False
+    
+    # Check for consecutive hyphens
+    if '--' in bucket:
+        return False
+    
+    return True
+
+
 def format_size(size) -> str:
     """
     Format size in bytes to human-readable format.

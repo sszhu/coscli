@@ -232,7 +232,7 @@ Ensure these are set:
 
 You need to set the assume role in your configuration:
 ```bash
-cos configure set assume_role "qcs::cam::uin/100013805939:roleName/YourRole"
+cos configure set assume_role "qcs::cam::uin/1234567890:roleName/YourRole"
 ```
 
 ### Error: "Duration must be at least 1800 seconds"

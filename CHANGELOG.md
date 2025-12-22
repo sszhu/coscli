@@ -5,6 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-12-22
+
+### Added
+- **Prefix-Restricted STS Tokens**: Comprehensive policy-based access control
+  - New `--bucket` option: Scope credentials to specific bucket
+  - New `--prefix` option: Restrict access to specific path/folder
+  - New `--region` option: Override default region (now ap-shanghai)
+  - New `--appid` option: Manually specify APPID
+  - New `--action` option: Specify custom CAM actions (repeatable)
+  - New `--read-only` flag: Quick mode for read-only access
+- **Policy Building**: Automatic CAM policy generation for scoped access
+  - `build_policy()` function: Constructs resource-restricted policies
+  - Support for prefix-based wildcards (`prefix/*`)
+  - Bucket-level operations (ListMultipartUploads, ListParts)
+- **APPID Extraction**: Automatic extraction from bucket names
+  - `extract_appid_from_bucket()` validates 10-digit APPID format
+- **Bucket Validation**: `validate_bucket_name()` with Tencent COS rules
+- **Comprehensive Test Suite**: 26 tests for token functionality (100% passing)
+  - Policy building tests (6)
+  - APPID extraction tests (5)
+  - CLI integration tests (11)
+  - STS manager tests (4)
+- **Documentation Updates**:
+  - [STS_PREFIX_ACCESS_GUIDE.md](docs/STS_PREFIX_ACCESS_GUIDE.md) - Complete guide with examples
+  - [TOKEN_USAGE_GUIDE.md](docs/TOKEN_USAGE_GUIDE.md) - Token management patterns
+  - [CREDENTIAL_PRECEDENCE.md](docs/CREDENTIAL_PRECEDENCE.md) - **NEW**: Complete credential resolution rules
+  - [SECURITY_REVIEW.md](SECURITY_REVIEW.md) - Security audit and sanitization
+
+### Changed
+- **Default Region**: Changed from ap-singapore to ap-shanghai globally
+- **STSTokenManager**: Enhanced to support policy-based credentials
+  - Disables caching when policy provided (ensures fresh scoped tokens)
+  - Accepts both policy dict and policy string
+- **Token Output**: Fixed Click echo issues (removed unsupported `end` parameter)
+- **Credential Resolution**: **MAJOR REFACTOR** - Clear precedence rules
+  - `get_credentials()`: Explicit mode detection prevents conflicts
+  - Environment `COS_TOKEN` now completely isolates from config file
+  - Added `_source` field to track credential origin
+  - Validation ensures temporary credentials are complete
+  - See [CREDENTIAL_PRECEDENCE.md](docs/CREDENTIAL_PRECEDENCE.md) for full details
+
+### Fixed
+- **Credential Conflicts**: Environment temporary tokens no longer conflict with config `assume_role`
+  - When `COS_TOKEN` is set, config file is completely bypassed
+  - Prevents mixed credential sources causing ambiguous behavior
+  - Clear error messages when temporary credentials are incomplete
+- **GetBucket Permission**: Listing now works with prefix-restricted tokens
+  - Removed restrictive prefix condition on GetBucket action
+  - Object access still properly restricted to specified prefix
+  - Policy allows listing entire bucket but only accessing objects within prefix
+  - See [STS_PREFIX_ACCESS_GUIDE.md](docs/STS_PREFIX_ACCESS_GUIDE.md#troubleshooting) for details
+
+### Security
+- **Sanitized Documentation**: Removed all production bucket names and real account identifiers
+- **Generic Examples**: All docs now use placeholder values (my-bucket-1234567890, etc.)
+
 ## [2.0.1] - 2025-12-21
 
 ### Added

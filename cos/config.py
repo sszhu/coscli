@@ -143,6 +143,16 @@ class ConfigManager:
         
         return None
     
+    def has_env_credentials(self) -> bool:
+        """
+        Check if any credential is set via environment variables.
+        
+        Returns:
+            True if any credential environment variable is set
+        """
+        env_keys = ["COS_SECRET_ID", "COS_SECRET_KEY", "COS_TOKEN"]
+        return any(key in os.environ for key in env_keys)
+    
     def set_credential_value(self, key: str, value: str) -> None:
         """
         Set credential value.
@@ -179,14 +189,44 @@ class ConfigManager:
     
     def get_credentials(self) -> Dict[str, str]:
         """
-        Get all credentials.
+        Get all credentials with clear precedence rules.
+        
+        Credential Resolution Precedence:
+        1. If COS_TOKEN is set (environment): Use temp credentials from env
+           - Requires: COS_SECRET_ID, COS_SECRET_KEY, COS_TOKEN
+           - Ignores: Config file assume_role (prevents conflict)
+        2. If assume_role in config: Use STS to generate temp credentials
+        3. Otherwise: Use permanent credentials from config/env
         
         Returns:
             Dictionary containing credentials
             
         Raises:
-            ConfigurationError: If required credentials are missing
+            ConfigurationError: If required credentials are missing or conflict
         """
+        # Check if temporary token is provided via environment
+        env_token = os.environ.get("COS_TOKEN")
+        
+        if env_token:
+            # Mode 1: Using temporary credentials from environment
+            # In this mode, we ONLY use environment variables and ignore config file
+            secret_id = os.environ.get("COS_SECRET_ID")
+            secret_key = os.environ.get("COS_SECRET_KEY")
+            
+            if not secret_id or not secret_key:
+                raise ConfigurationError(
+                    "COS_TOKEN is set but COS_SECRET_ID or COS_SECRET_KEY is missing. "
+                    "Temporary credentials require all three environment variables."
+                )
+            
+            return {
+                "secret_id": secret_id,
+                "secret_key": secret_key,
+                "token": env_token,
+                "_source": "env_temp"
+            }
+        
+        # Mode 2 & 3: Using config file credentials (with optional env override)
         secret_id = self.get_credential_value("secret_id")
         secret_key = self.get_credential_value("secret_key")
         
@@ -200,15 +240,23 @@ class ConfigManager:
             "secret_key": secret_key,
         }
         
-        # Optional values
+        # Check for token in config file (from import-token command)
+        config_token = self.get_credential_value("token")
+        if config_token:
+            # Mode 2a: Temporary token stored in config file
+            credentials["token"] = config_token
+            credentials["_source"] = "config_temp"
+            return credentials
+        
+        # Check for assume_role (STS mode)
         assume_role = self.get_credential_value("assume_role")
         if assume_role:
+            # Mode 2b: Use STS to generate temporary credentials
             credentials["assume_role"] = assume_role
-        
-        # Check for temporary token
-        token = self.get_credential_value("token")
-        if token:
-            credentials["token"] = token
+            credentials["_source"] = "sts"
+        else:
+            # Mode 3: Permanent credentials
+            credentials["_source"] = "permanent"
         
         return credentials
     
