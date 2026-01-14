@@ -176,7 +176,18 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, include
             error_message(f"Skipping {key} (excluded by pattern)")
             return
         
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        # Determine final destination path:
+        # - If destination points to an existing directory, or ends with '/', or is '.'/"./",
+        #   download into that directory using the source filename.
+        dest_is_dir_hint = destination.endswith('/') or destination in ('.', './')
+        if dest_path.exists() and dest_path.is_dir():
+            final_path = dest_path / filename
+        elif dest_is_dir_hint:
+            final_path = dest_path / filename
+        else:
+            final_path = dest_path
+        
+        final_path.parent.mkdir(parents=True, exist_ok=True)
         
         if not no_progress:
             # Get file size first
@@ -195,13 +206,13 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, include
                 TransferSpeedColumn(),
             ) as progress:
                 task = progress.add_task(f"Downloading {key}...", total=file_size)
-                cos_client.download_file(key, str(dest_path))
+                cos_client.download_file(key, str(final_path))
                 if file_size:
                     progress.update(task, completed=file_size)
         else:
-            cos_client.download_file(key, str(dest_path))
+            cos_client.download_file(key, str(final_path))
         
-        success_message(f"Downloaded cos://{bucket}/{key} to {destination}")
+        success_message(f"Downloaded cos://{bucket}/{key} to {str(final_path)}")
     else:
         # Directory download - apply patterns
         response = cos_client.list_objects(prefix=key, delimiter="")
