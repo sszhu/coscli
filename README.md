@@ -68,6 +68,11 @@ uv pip install -e .
 - uv package manager
 - Tencent Cloud Account with COS access
 
+### Progress Bars & Non-TTY Environments
+- Progress is enabled by default in interactive terminals.
+- In non-TTY environments (e.g., CI), progress is automatically disabled.
+- You can force-disable progress for scripts with `--no-progress`.
+
 ### Troubleshooting Installation
 
 If you encounter SSL certificate errors during installation (common in corporate networks):
@@ -154,6 +159,9 @@ cos cp local-file.txt cos://my-bucket/remote-file.txt
 
 # Upload directory
 cos cp ./local-dir/ cos://my-bucket/remote-dir/ --recursive
+
+# Parallel upload (4 workers) with aggregated progress
+cos cp ./local-dir/ cos://my-bucket/remote-dir/ --recursive --concurrency 4
 ```
 
 #### Download Files
@@ -163,6 +171,9 @@ cos cp cos://my-bucket/file.txt ./local-file.txt
 
 # Download directory
 cos cp cos://my-bucket/folder/ ./local-folder/ --recursive
+
+# Parallel download (8 workers) with aggregated progress
+cos cp cos://my-bucket/folder/ ./local-folder/ --recursive --concurrency 8
 ```
 
 #### Copy Between Buckets

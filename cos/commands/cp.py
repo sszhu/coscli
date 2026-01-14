@@ -1,6 +1,8 @@
 """Copy command for COS CLI"""
 
 import os
+import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 import click
@@ -34,8 +36,9 @@ from ..exceptions import COSError
 @click.option("--include", multiple=True, help="Include files matching pattern")
 @click.option("--exclude", multiple=True, help="Exclude files matching pattern")
 @click.option("--no-progress", is_flag=True, help="Disable progress bar")
+@click.option("--concurrency", "concurrency", type=int, default=4, help="Number of parallel transfers for bulk operations")
 @click.pass_context
-def cp(ctx, source, destination, recursive, include, exclude, no_progress):
+def cp(ctx, source, destination, recursive, include, exclude, no_progress, concurrency):
     """
     Copy files to/from COS.
 
@@ -58,13 +61,18 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress):
         source_is_cos = is_cos_uri(source)
         dest_is_cos = is_cos_uri(destination)
         
+        # Detect non-TTY and disable progress unless explicitly enabled
+        auto_no_progress = not sys.stdout.isatty()
+        if auto_no_progress:
+            no_progress = True
+
         # Determine operation type
         if source_is_cos and not dest_is_cos:
             # Download
-            _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
+            _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency)
         elif not source_is_cos and dest_is_cos:
             # Upload
-            _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
+            _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency)
         elif source_is_cos and dest_is_cos:
             # Copy between buckets
             _copy_objects(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
@@ -81,7 +89,7 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress):
         ctx.exit(1)
 
 
-def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
+def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency):
     """Upload local files to COS"""
     bucket, key = parse_cos_uri(destination)
     cos_client = COSClient(cos_client_raw, bucket)
@@ -137,32 +145,51 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, 
             error_message("No files match the specified patterns")
             return
         
+        # Aggregate total bytes for progress
+        file_sizes = {f: f.stat().st_size for f in filtered_files}
+        total_bytes = sum(file_sizes.values())
+
         if not no_progress:
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
+                TransferSpeedColumn(),
+                TimeRemainingColumn(),
             ) as progress:
-                task = progress.add_task(f"Uploading {len(filtered_files)} files...", total=len(filtered_files))
-                
-                for file_path in filtered_files:
+                task = progress.add_task(f"Uploading {len(filtered_files)} files...", total=total_bytes)
+
+                def do_upload(file_path: Path):
                     rel_path = file_path.relative_to(source_path)
                     dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
                     cos_client.upload_file(str(file_path), dest_key)
-                    progress.update(task, advance=1)
+                    progress.update(task, advance=file_sizes[file_path])
+
+                with ThreadPoolExecutor(max_workers=max(1, concurrency)) as executor:
+                    futures = [executor.submit(do_upload, fp) for fp in filtered_files]
+                    for fut in as_completed(futures):
+                        exc = fut.exception()
+                        if exc:
+                            raise exc
         else:
-            for file_path in filtered_files:
-                rel_path = file_path.relative_to(source_path)
-                dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
-                cos_client.upload_file(str(file_path), dest_key)
+            with ThreadPoolExecutor(max_workers=max(1, concurrency)) as executor:
+                def do_upload(file_path: Path):
+                    rel_path = file_path.relative_to(source_path)
+                    dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
+                    cos_client.upload_file(str(file_path), dest_key)
+                futures = [executor.submit(do_upload, fp) for fp in filtered_files]
+                for fut in as_completed(futures):
+                    exc = fut.exception()
+                    if exc:
+                        raise exc
         
         success_message(f"Uploaded {len(filtered_files)} files to cos://{bucket}/{key}")
     else:
         raise COSError(f"Source path does not exist: {source}")
 
 
-def _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
+def _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency):
     """Download files from COS to local"""
     bucket, key = parse_cos_uri(source)
     cos_client = COSClient(cos_client_raw, bucket)
@@ -217,7 +244,7 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, include
         # Directory download - apply patterns
         response = cos_client.list_objects(prefix=key, delimiter="")
         objects = response.get("Contents", [])
-        
+
         # Filter by patterns
         include_patterns = list(include) if include else None
         exclude_patterns = list(exclude) if exclude else None
@@ -225,35 +252,54 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, include
             obj for obj in objects
             if should_process_file(obj.get("Key", "").split('/')[-1], include_patterns, exclude_patterns)
         ]
-        
+
         if not filtered_objects:
             error_message("No files match the specified patterns")
             return
-        
+
+        # Aggregate total bytes for progress
+        object_sizes = {obj.get("Key", ""): int(obj.get("Size", 0)) for obj in filtered_objects}
+        total_bytes = sum(object_sizes.values())
+
         if not no_progress:
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
+                TransferSpeedColumn(),
+                TimeRemainingColumn(),
             ) as progress:
-                task = progress.add_task(f"Downloading {len(filtered_objects)} files...", total=len(filtered_objects))
-                
-                for obj in filtered_objects:
+                task = progress.add_task(f"Downloading {len(filtered_objects)} files...", total=total_bytes)
+
+                def do_download(obj):
                     obj_key = obj.get("Key", "")
                     rel_path = obj_key[len(key):].lstrip("/")
                     local_path = dest_path / rel_path
                     local_path.parent.mkdir(parents=True, exist_ok=True)
                     cos_client.download_file(obj_key, str(local_path))
-                    progress.update(task, advance=1)
+                    progress.update(task, advance=object_sizes[obj_key])
+
+                with ThreadPoolExecutor(max_workers=max(1, concurrency)) as executor:
+                    futures = [executor.submit(do_download, obj) for obj in filtered_objects]
+                    for fut in as_completed(futures):
+                        exc = fut.exception()
+                        if exc:
+                            raise exc
         else:
-            for obj in filtered_objects:
-                obj_key = obj.get("Key", "")
-                rel_path = obj_key[len(key):].lstrip("/")
-                local_path = dest_path / rel_path
-                local_path.parent.mkdir(parents=True, exist_ok=True)
-                cos_client.download_file(obj_key, str(local_path))
-        
+            with ThreadPoolExecutor(max_workers=max(1, concurrency)) as executor:
+                def do_download(obj):
+                    obj_key = obj.get("Key", "")
+                    rel_path = obj_key[len(key):].lstrip("/")
+                    local_path = dest_path / rel_path
+                    local_path.parent.mkdir(parents=True, exist_ok=True)
+                    cos_client.download_file(obj_key, str(local_path))
+                futures = [executor.submit(do_download, obj) for obj in filtered_objects]
+                for fut in as_completed(futures):
+                    exc = fut.exception()
+                    if exc:
+                        raise exc
+
         success_message(f"Downloaded {len(filtered_objects)} files to {destination}")
 
 
