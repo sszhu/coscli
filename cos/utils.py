@@ -51,6 +51,46 @@ def parse_cos_uri(uri: str) -> tuple[str, str]:
     return bucket, key
 
 
+def parse_size_to_bytes(size: Optional[str | int | float]) -> int:
+    """Parse a human-friendly size string into bytes.
+
+    Accepts integers (already bytes) or strings like '8MB', '64kb', '1g'.
+    Defaults to 8MB when input is None.
+    """
+    default = 8 * 1024 * 1024
+    if size is None:
+        return default
+    if isinstance(size, (int, float)):
+        return int(size)
+    s = str(size).strip().lower()
+    if not s:
+        return default
+    units = {
+        'b': 1,
+        'kb': 1024,
+        'k': 1024,
+        'mb': 1024 * 1024,
+        'm': 1024 * 1024,
+        'gb': 1024 * 1024 * 1024,
+        'g': 1024 * 1024 * 1024,
+    }
+    # Extract numeric and unit
+    num = ''
+    unit = ''
+    for ch in s:
+        if ch.isdigit() or ch == '.' or (ch == '-' and not num):
+            num += ch
+        else:
+            unit += ch
+    try:
+        val = float(num) if num else 0
+    except ValueError:
+        return default
+    unit = unit.strip() or 'b'
+    mult = units.get(unit, 1)
+    return int(val * mult)
+
+
 def validate_bucket_name(bucket: str) -> bool:
     """
     Validate Tencent COS bucket name.

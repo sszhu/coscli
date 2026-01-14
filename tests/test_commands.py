@@ -334,6 +334,27 @@ class TestMvCommand:
         assert result.exit_code == 0
         mock_cos_client.upload_file.assert_called()
 
+    @patch('cos.commands.mv.ConfigManager')
+    @patch('cos.commands.mv.COSAuthenticator')
+    @patch('cos.commands.mv.COSClient')
+    def test_mv_with_flags_parse(self, mock_client_class, mock_auth_class,
+                                 mock_config_class, cli_runner, mock_cos_client,
+                                 mock_authenticator, mock_config_manager,
+                                 temp_test_file):
+        """Test mv accepts part-size/retry flags and still uploads (no-progress)"""
+        mock_config_class.return_value = mock_config_manager
+        mock_auth_class.return_value = mock_authenticator
+        mock_client_class.return_value = mock_cos_client
+
+        result = cli_runner.invoke(mv, [
+            temp_test_file,
+            'cos://test-bucket/test.txt',
+            '--no-progress', '--part-size', '1MB', '--max-retries', '2', '--retry-backoff', '0.1', '--retry-backoff-max', '0.5'
+        ], obj={"profile": "default"})
+
+        assert result.exit_code == 0
+        mock_cos_client.upload_file.assert_called()
+
 
 # ============================================================================
 # RM COMMAND TESTS

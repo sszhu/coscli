@@ -52,11 +52,16 @@ def get_cos_files(cos_client, prefix=""):
         # Remove prefix to get relative path
         relative_key = key[len(prefix):].lstrip("/") if prefix else key
         
+        last_modified = obj.get("LastModified")
+        if last_modified:
+            mtime = datetime.fromisoformat(last_modified.replace('Z', '+00:00')).timestamp()
+        else:
+            mtime = 0.0
         files[relative_key] = {
-            "size": obj["Size"],
-            "mtime": datetime.fromisoformat(obj["LastModified"].replace('Z', '+00:00')).timestamp(),
+            "size": obj.get("Size", 0),
+            "mtime": mtime,
             "key": key,
-            "etag": obj.get("ETag", "").strip('"')  # Add ETag for checksum comparison
+            "etag": obj.get("ETag", "").strip('"')
         }
     
     return files
@@ -71,8 +76,14 @@ def get_cos_files(cos_client, prefix=""):
 @click.option("--checksum", is_flag=True, help="Use checksums for comparison (slower but accurate)")
 @click.option("--include", multiple=True, help="Include files matching pattern")
 @click.option("--exclude", multiple=True, help="Exclude files matching pattern")
+@click.option("--no-progress", is_flag=True, help="Disable progress bar")
 @click.pass_context
-def sync(ctx, source, destination, delete, dryrun, size_only, checksum, include, exclude):
+@click.option("--part-size", type=str, default=None, help="Part size for multipart/ranged transfers (e.g., 8MB, 64MB)")
+@click.option("--max-retries", type=int, default=3, help="Max retries for part/range operations")
+@click.option("--retry-backoff", type=float, default=0.5, help="Initial backoff seconds between retries")
+@click.option("--retry-backoff-max", type=float, default=5.0, help="Max backoff seconds for retries")
+@click.option("--resume/--no-resume", default=True, help="Resume interrupted ranged downloads")
+def sync(ctx, source, destination, delete, dryrun, size_only, checksum, include, exclude, no_progress, part_size, max_retries, retry_backoff, retry_backoff_max, resume):
     """
     Synchronize directories between local and COS.
 
@@ -99,8 +110,9 @@ def sync(ctx, source, destination, delete, dryrun, size_only, checksum, include,
             ctx.exit(1)
         
         # Get config and auth
-        profile = ctx.obj.get("profile", "default")
-        region = ctx.obj.get("region")
+        ctx_obj = ctx.obj or {}
+        profile = ctx_obj.get("profile", "default")
+        region = ctx_obj.get("region")
         
         config_manager = ConfigManager(profile)
         authenticator = COSAuthenticator(config_manager)
@@ -159,7 +171,39 @@ def sync(ctx, source, destination, delete, dryrun, size_only, checksum, include,
                 
                 if needs_upload:
                     if not dryrun:
-                        cos_client.upload_file(local_info["path"], cos_key)
+                        if no_progress:
+                            cos_client.upload_file(local_info["path"], cos_key)
+                        else:
+                            # Multipart with progress and retries
+                            from rich.progress import (
+                                Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TransferSpeedColumn, TimeRemainingColumn
+                            )
+                            from ..transfer import upload_file_multipart_with_progress
+                            from ..utils import parse_size_to_bytes
+                            ps = parse_size_to_bytes(part_size)
+                            file_size = local_info["size"]
+                            with Progress(
+                                SpinnerColumn(),
+                                TextColumn("[progress.description]{task.description}"),
+                                BarColumn(),
+                                TaskProgressColumn(),
+                                TransferSpeedColumn(),
+                                TimeRemainingColumn(),
+                            ) as progress:
+                                task = progress.add_task(f"Uploading {rel_path}...", total=file_size)
+                                def on_update(done, _total):
+                                    progress.update(task, completed=done)
+                                upload_file_multipart_with_progress(
+                                    cos_client_raw,
+                                    bucket,
+                                    cos_key,
+                                    Path(local_info["path"]),
+                                    chunk_size=ps,
+                                    progress_update=on_update,
+                                    max_retries=max_retries,
+                                    retry_backoff=retry_backoff,
+                                    retry_backoff_max=retry_backoff_max,
+                                )
                     upload_count += 1
                 else:
                     skip_count += 1
@@ -237,7 +281,32 @@ def sync(ctx, source, destination, delete, dryrun, size_only, checksum, include,
                 if needs_download:
                     if not dryrun:
                         local_path.parent.mkdir(parents=True, exist_ok=True)
-                        cos_client.download_file(cos_info["key"], str(local_path))
+                        if no_progress:
+                            cos_client.download_file(cos_info["key"], str(local_path))
+                        else:
+                            # Use ranged download with retries and optional resume
+                            from ..transfer import download_file_in_ranges_with_progress
+                            from ..utils import parse_size_to_bytes, ResumeTracker
+                            ps = parse_size_to_bytes(part_size)
+                            total_size = int(cos_info.get("size", 0))
+                            tracker = ResumeTracker() if resume else None
+                            # Minimal per-file progress in sync mode (could be aggregated later)
+                            def noop(done, total):
+                                return None
+                            download_file_in_ranges_with_progress(
+                                cos_client_raw,
+                                bucket,
+                                cos_info["key"],
+                                local_path,
+                                total_size=total_size,
+                                chunk_size=ps,
+                                progress_update=noop,
+                                resume=resume,
+                                resume_tracker=tracker,
+                                max_retries=max_retries,
+                                retry_backoff=retry_backoff,
+                                retry_backoff_max=retry_backoff_max,
+                            )
                     download_count += 1
                 else:
                     skip_count += 1

@@ -21,8 +21,13 @@ from ..exceptions import COSError
 @click.argument("destination")
 @click.option("--recursive", "-r", is_flag=True, help="Move recursively")
 @click.option("--force", "-f", is_flag=True, help="Force overwrite")
+@click.option("--no-progress", is_flag=True, help="Disable progress bar")
+@click.option("--part-size", type=str, default=None, help="Part size for multipart upload (e.g., 8MB, 64MB)")
+@click.option("--max-retries", type=int, default=3, help="Max retries for part operations")
+@click.option("--retry-backoff", type=float, default=0.5, help="Initial backoff seconds between retries")
+@click.option("--retry-backoff-max", type=float, default=5.0, help="Max backoff seconds for retries")
 @click.pass_context
-def mv(ctx, source, destination, recursive, force):
+def mv(ctx, source, destination, recursive, force, no_progress, part_size, max_retries, retry_backoff, retry_backoff_max):
     """
     Move or rename objects.
 
@@ -33,28 +38,73 @@ def mv(ctx, source, destination, recursive, force):
       cos mv cos://bucket1/file cos://bucket2/file           # Move between buckets
     """
     try:
-        # Validate URIs
-        if not is_cos_uri(source):
-            raise COSError(f"Source must be a COS URI: {source}")
-        if not is_cos_uri(destination):
+        # Branches: COS->COS, Local->COS (upload + delete), COS->Local (unsupported)
+        src_is_cos = is_cos_uri(source)
+        dst_is_cos = is_cos_uri(destination)
+
+        if not dst_is_cos:
             raise COSError(f"Destination must be a COS URI: {destination}")
-        
-        # Parse URIs
+
+        ctx_obj = ctx.obj or {}
+        profile = ctx_obj.get("profile", "default")
+        region = ctx_obj.get("region")
+        config_manager = ConfigManager(profile)
+        authenticator = COSAuthenticator(config_manager)
+        cos_client_raw = authenticator.authenticate(region)
+
+        if not src_is_cos:
+            # Local -> COS
+            src_path = Path(source)
+            if not src_path.exists() or not src_path.is_file():
+                raise COSError(f"Source file not found: {source}")
+            dst_bucket, dst_key = parse_cos_uri(destination)
+            if not dst_key:
+                raise COSError("Destination key cannot be empty")
+            client = COSClient(cos_client_raw, dst_bucket)
+            if no_progress:
+                client.upload_file(str(src_path), dst_key)
+            else:
+                from rich.progress import (
+                    Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn, TransferSpeedColumn, TimeRemainingColumn
+                )
+                from ..transfer import upload_file_multipart_with_progress
+                from ..utils import parse_size_to_bytes
+                ps = parse_size_to_bytes(part_size)
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TaskProgressColumn(),
+                    TransferSpeedColumn(),
+                    TimeRemainingColumn(),
+                ) as progress:
+                    file_size = src_path.stat().st_size
+                    task = progress.add_task(f"Uploading {src_path.name}...", total=file_size)
+                    def on_update(done, _total):
+                        progress.update(task, completed=done)
+                    upload_file_multipart_with_progress(
+                        cos_client_raw,
+                        dst_bucket,
+                        dst_key,
+                        src_path,
+                        chunk_size=ps,
+                        progress_update=on_update,
+                        max_retries=max_retries,
+                        retry_backoff=retry_backoff,
+                        retry_backoff_max=retry_backoff_max,
+                    )
+            # Delete local file after successful upload
+            src_path.unlink()
+            success_message(f"Moved local {source} -> cos://{dst_bucket}/{dst_key}")
+            return
+
+        # COS -> COS path
         src_bucket, src_key = parse_cos_uri(source)
         dst_bucket, dst_key = parse_cos_uri(destination)
-        
         if not src_key:
             raise COSError("Source key cannot be empty")
         if not dst_key:
             raise COSError("Destination key cannot be empty")
-        
-        # Get config and auth
-        profile = ctx.obj.get("profile", "default")
-        region = ctx.obj.get("region")
-        
-        config_manager = ConfigManager(profile)
-        authenticator = COSAuthenticator(config_manager)
-        cos_client_raw = authenticator.authenticate(region)
         
         # Handle recursive move
         if recursive:
@@ -84,18 +134,8 @@ def mv(ctx, source, destination, recursive, force):
                 # Copy
                 copy_source = {'Bucket': src_bucket, 'Key': src_obj_key, 'Region': region or config_manager.get_region()}
                 
-                if src_bucket == dst_bucket:
-                    cos_client_raw.copy_object(
-                        Bucket=dst_bucket,
-                        Key=dst_obj_key,
-                        CopySource=copy_source
-                    )
-                else:
-                    cos_client_raw.copy_object(
-                        Bucket=dst_bucket,
-                        Key=dst_obj_key,
-                        CopySource=copy_source
-                    )
+                # Use wrapper for testability
+                client.copy_object(src_bucket, src_obj_key, dst_bucket, dst_obj_key)
                 
                 # Delete source
                 src_client.delete_object(src_obj_key)
@@ -133,11 +173,9 @@ def mv(ctx, source, destination, recursive, force):
                 'Region': region or config_manager.get_region()
             }
             
-            cos_client_raw.copy_object(
-                Bucket=dst_bucket,
-                Key=dst_key,
-                CopySource=copy_source
-            )
+            # Use wrapper for testability
+            client = COSClient(cos_client_raw)
+            client.copy_object(src_bucket, src_key, dst_bucket, dst_key)
             
             # Delete source
             src_client.delete_object(src_key)

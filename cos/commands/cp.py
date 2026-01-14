@@ -1,6 +1,5 @@
 """Copy command for COS CLI"""
 
-import os
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -19,6 +18,11 @@ from rich.progress import (
 from ..auth import COSAuthenticator
 from ..client import COSClient
 from ..config import ConfigManager
+from ..transfer import (
+    download_file_with_progress_polling,
+    upload_file_multipart_with_progress,
+    download_file_in_ranges_with_progress,
+)
 from ..utils import (
     parse_cos_uri,
     is_cos_uri,
@@ -26,7 +30,7 @@ from ..utils import (
     error_message,
     should_process_file,
 )
-from ..exceptions import COSError
+from ..exceptions import COSError, ObjectNotFoundError
 
 
 @click.command()
@@ -37,8 +41,13 @@ from ..exceptions import COSError
 @click.option("--exclude", multiple=True, help="Exclude files matching pattern")
 @click.option("--no-progress", is_flag=True, help="Disable progress bar")
 @click.option("--concurrency", "concurrency", type=int, default=4, help="Number of parallel transfers for bulk operations")
+@click.option("--part-size", type=str, default=None, help="Part size for multipart and ranged transfers (e.g., 8MB, 64MB)")
+@click.option("--max-retries", type=int, default=3, help="Max retries for part/range operations")
+@click.option("--retry-backoff", type=float, default=0.5, help="Initial backoff seconds between retries")
+@click.option("--retry-backoff-max", type=float, default=5.0, help="Max backoff seconds for retries")
+@click.option("--resume/--no-resume", default=True, help="Resume interrupted ranged downloads")
 @click.pass_context
-def cp(ctx, source, destination, recursive, include, exclude, no_progress, concurrency):
+def cp(ctx, source, destination, recursive, include, exclude, no_progress, concurrency, part_size, max_retries, retry_backoff, retry_backoff_max, resume):
     """
     Copy files to/from COS.
 
@@ -51,8 +60,9 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress, concu
     """
     try:
         # Get config and auth
-        profile = ctx.obj.get("profile", "default")
-        region = ctx.obj.get("region")
+        ctx_obj = ctx.obj or {}
+        profile = ctx_obj.get("profile", "default")
+        region = ctx_obj.get("region")
         
         config_manager = ConfigManager(profile)
         authenticator = COSAuthenticator(config_manager)
@@ -69,10 +79,16 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress, concu
         # Determine operation type
         if source_is_cos and not dest_is_cos:
             # Download
-            _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency)
+            _download_files(
+                ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency,
+                part_size, max_retries, retry_backoff, retry_backoff_max, resume
+            )
         elif not source_is_cos and dest_is_cos:
             # Upload
-            _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency)
+            _upload_files(
+                ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency,
+                part_size, max_retries, retry_backoff, retry_backoff_max
+            )
         elif source_is_cos and dest_is_cos:
             # Copy between buckets
             _copy_objects(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress)
@@ -82,14 +98,9 @@ def cp(ctx, source, destination, recursive, include, exclude, no_progress, concu
     except COSError as e:
         error_message(str(e))
         ctx.exit(1)
-    except Exception as e:
-        if ctx.obj.get("debug"):
-            raise
-        error_message("An unexpected error occurred", e)
-        ctx.exit(1)
 
 
-def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency):
+def _upload_files(_ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency, part_size, max_retries, retry_backoff, retry_backoff_max):
     """Upload local files to COS"""
     bucket, key = parse_cos_uri(destination)
     cos_client = COSClient(cos_client_raw, bucket)
@@ -114,12 +125,30 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, 
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
-                TimeRemainingColumn(),
                 TransferSpeedColumn(),
+                TimeRemainingColumn(),
             ) as progress:
-                task = progress.add_task(f"Uploading {source_path.name}...", total=source_path.stat().st_size)
-                cos_client.upload_file(str(source_path), target_key)
-                progress.update(task, completed=source_path.stat().st_size)
+                file_size = source_path.stat().st_size
+                task = progress.add_task(
+                    f"Uploading {source_path.name}...", total=file_size
+                )
+                # Use multipart upload for streaming progress
+                def on_update(done, _total):
+                    progress.update(task, completed=done)
+                # resolve part size
+                from ..utils import parse_size_to_bytes
+                ps = parse_size_to_bytes(part_size)
+                upload_file_multipart_with_progress(
+                    cos_client_raw,
+                    bucket,
+                    target_key,
+                    source_path,
+                    chunk_size=ps,
+                    progress_update=on_update,
+                    max_retries=max_retries,
+                    retry_backoff=retry_backoff,
+                    retry_backoff_max=retry_backoff_max,
+                )
         else:
             cos_client.upload_file(str(source_path), target_key)
         
@@ -162,7 +191,7 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, 
 
                 def do_upload(file_path: Path):
                     rel_path = file_path.relative_to(source_path)
-                    dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
+                    dest_key = (f"{key.rstrip('/')}/{rel_path}").lstrip("/") if key else str(rel_path)
                     cos_client.upload_file(str(file_path), dest_key)
                     progress.update(task, advance=file_sizes[file_path])
 
@@ -176,7 +205,7 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, 
             with ThreadPoolExecutor(max_workers=max(1, concurrency)) as executor:
                 def do_upload(file_path: Path):
                     rel_path = file_path.relative_to(source_path)
-                    dest_key = f"{key}/{rel_path}".strip("/") if key else str(rel_path)
+                    dest_key = (f"{key.rstrip('/')}/{rel_path}").lstrip("/") if key else str(rel_path)
                     cos_client.upload_file(str(file_path), dest_key)
                 futures = [executor.submit(do_upload, fp) for fp in filtered_files]
                 for fut in as_completed(futures):
@@ -189,13 +218,78 @@ def _upload_files(ctx, cos_client_raw, source, destination, recursive, include, 
         raise COSError(f"Source path does not exist: {source}")
 
 
-def _download_files(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency):
+def _download_files(_ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress, concurrency, part_size, max_retries, retry_backoff, retry_backoff_max, resume):
     """Download files from COS to local"""
     bucket, key = parse_cos_uri(source)
     cos_client = COSClient(cos_client_raw, bucket)
     
     dest_path = Path(destination)
     
+    def _resolve_remote_size() -> int:
+        """Resolve object size reliably using HEAD, then list, then ranged GET.
+
+        Returns 0 if size cannot be determined.
+        Raises ObjectNotFoundError if the object does not exist.
+        """
+        # Try HEAD first
+        try:
+            head_response = cos_client.head_object(key)
+            # Different SDKs/versions may use different keys
+            if hasattr(head_response, "get"):
+                for k in ("Content-Length", "ContentLength", "content-length"):
+                    try:
+                        v = head_response.get(k)
+                        if v is None:
+                            continue
+                        size_val = int(v)
+                        if size_val > 0:
+                            return size_val
+                    except (TypeError, ValueError):
+                        continue
+        except ObjectNotFoundError:
+            # Bubble up for caller to handle
+            raise
+        except COSError:
+            # Fall through to other strategies
+            pass
+
+        # Fallback to ListObjects to locate exact key size
+        try:
+            listing = cos_client.list_objects(prefix=key, delimiter="")
+            for obj in listing.get("Contents", []):
+                if obj.get("Key") == key:
+                    try:
+                        size_val = int(obj.get("Size", 0))
+                        if size_val > 0:
+                            return size_val
+                    except (TypeError, ValueError):
+                        pass
+        except COSError:
+            pass
+
+        # Final fallback: ranged GET 0-0 and parse Content-Range header
+        try:
+            resp = cos_client_raw.get_object(Bucket=bucket, Key=key, Range="bytes=0-0")
+            # SDK may provide headers directly or within response metadata
+            cr = (
+                resp.get("Content-Range")
+                or getattr(resp, "headers", {}).get("Content-Range")
+                or resp.get("ResponseHeaders", {}).get("Content-Range")
+            )
+            if isinstance(cr, str) and "/" in cr:
+                total_part = cr.split("/")[-1]
+                try:
+                    total = int(total_part)
+                    if total > 0:
+                        return total
+                except (TypeError, ValueError):
+                    pass
+        except Exception:
+            # Ignore; return unknown size
+            pass
+
+        return 0
+
     if not recursive:
         # Single file download - check patterns
         filename = key.split('/')[-1] if '/' in key else key
@@ -216,26 +310,60 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, include
         
         final_path.parent.mkdir(parents=True, exist_ok=True)
         
+        # Determine remote size and existence before starting transfer
+        try:
+            file_size = _resolve_remote_size()
+        except ObjectNotFoundError:
+            raise COSError(f"Object not found: cos://{bucket}/{key}")
+
         if not no_progress:
-            # Get file size first
-            try:
-                head_response = cos_client.head_object(key)
-                file_size = int(head_response.get("Content-Length", 0))
-            except:
-                file_size = None
-            
+            # Note: file_size may be 0 for unknown; progress will handle indeterminate totals
+
             with Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
-                TimeRemainingColumn(),
                 TransferSpeedColumn(),
+                TimeRemainingColumn(),
             ) as progress:
-                task = progress.add_task(f"Downloading {key}...", total=file_size)
-                cos_client.download_file(key, str(final_path))
-                if file_size:
-                    progress.update(task, completed=file_size)
+                task = progress.add_task(
+                    f"Downloading {key}...", total=file_size or None
+                )
+                def on_update(done, _total):
+                    progress.update(task, completed=done)
+                try:
+                    if file_size and file_size > 0:
+                        from ..utils import parse_size_to_bytes, ResumeTracker
+                        ps = parse_size_to_bytes(part_size)
+                        # optional resume tracker
+                        tracker = ResumeTracker() if resume else None
+                        download_file_in_ranges_with_progress(
+                            cos_client_raw,
+                            bucket,
+                            key,
+                            final_path,
+                            total_size=file_size,
+                            chunk_size=ps,
+                            progress_update=on_update,
+                            resume=resume,
+                            resume_tracker=tracker,
+                            max_retries=max_retries,
+                            retry_backoff=retry_backoff,
+                            retry_backoff_max=retry_backoff_max,
+                        )
+                    else:
+                        download_file_with_progress_polling(
+                            cos_client_raw,
+                            bucket,
+                            key,
+                            final_path,
+                            total_size=file_size,
+                            progress_update=on_update,
+                        )
+                except Exception as _e:
+                    # Normalize any SDK error into a CLI error for consistent messaging
+                    raise COSError(f"Failed to download cos://{bucket}/{key}: {_e}")
         else:
             cos_client.download_file(key, str(final_path))
         
@@ -303,7 +431,7 @@ def _download_files(ctx, cos_client_raw, source, destination, recursive, include
         success_message(f"Downloaded {len(filtered_objects)} files to {destination}")
 
 
-def _copy_objects(ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
+def _copy_objects(_ctx, cos_client_raw, source, destination, recursive, include, exclude, no_progress):
     """Copy objects between COS locations"""
     source_bucket, source_key = parse_cos_uri(source)
     dest_bucket, dest_key = parse_cos_uri(destination)

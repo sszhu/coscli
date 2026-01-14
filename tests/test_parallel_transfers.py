@@ -1,9 +1,6 @@
-import io
-import os
 from pathlib import Path
 from typing import Dict, List
 
-import pytest
 from click.testing import CliRunner
 
 
@@ -11,13 +8,13 @@ class FakeRawClient:
     def __init__(self):
         self.storage: Dict[str, Dict[str, bytes]] = {}
 
-    def upload_file(self, Bucket: str, LocalFilePath: str, Key: str, **kwargs):
+    def upload_file(self, Bucket: str, LocalFilePath: str, Key: str, **_kwargs):
         data = Path(LocalFilePath).read_bytes()
         bucket = self.storage.setdefault(Bucket, {})
         bucket[Key] = data
         return {"ETag": "\"fake-etag\""}
 
-    def download_file(self, Bucket: str, Key: str, DestFilePath: str, **kwargs):
+    def download_file(self, Bucket: str, Key: str, DestFilePath: str, **_kwargs):
         data = self.storage.get(Bucket, {}).get(Key)
         if data is None:
             raise RuntimeError("NoSuchKey")
@@ -26,6 +23,7 @@ class FakeRawClient:
         return {"ETag": "\"fake-etag\""}
 
     def list_objects(self, Bucket: str, Prefix: str = "", Delimiter: str = "", MaxKeys: int = 1000):
+        _ = (Delimiter, MaxKeys)
         objs: List[Dict] = []
         for key, data in self.storage.get(Bucket, {}).items():
             if key.startswith(Prefix):
@@ -33,26 +31,33 @@ class FakeRawClient:
         return {"Contents": objs}
 
 
+_GLOBAL_FAKE_CLIENT = FakeRawClient()
+
 class FakeCOSAuthenticator:
     def __init__(self, _):
-        self.client = FakeRawClient()
+        # Persist the same client across authentications so upload then download works
+        self.client = _GLOBAL_FAKE_CLIENT
 
     def authenticate(self, region=None):
+        _ = region
         return self.client
 
 
 class FakeCOSClient:
-    def __init__(self, client: FakeRawClient, bucket: str = None):
+    def __init__(self, client, bucket=None):
         self.client = client
         self.bucket = bucket
 
-    def upload_file(self, local_path: str, key: str, bucket: str = None, **kwargs):
+    def upload_file(self, local_path, key, bucket=None, **_kwargs):
+        _ = bucket
         return self.client.upload_file(Bucket=self.bucket, LocalFilePath=local_path, Key=key)
 
-    def download_file(self, key: str, local_path: str, bucket: str = None, **kwargs):
+    def download_file(self, key, local_path, bucket=None, **_kwargs):
+        _ = bucket
         return self.client.download_file(Bucket=self.bucket, Key=key, DestFilePath=local_path)
 
-    def list_objects(self, bucket: str = None, prefix: str = "", delimiter: str = "", max_keys: int = 1000):
+    def list_objects(self, bucket=None, prefix="", delimiter="", max_keys=1000):
+        _ = bucket
         return self.client.list_objects(Bucket=self.bucket, Prefix=prefix, Delimiter=delimiter, MaxKeys=max_keys)
 
 

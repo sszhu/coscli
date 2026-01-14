@@ -116,7 +116,7 @@ ruff check cos/
 
 ## 📝 Version
 
-Current version: **2.0.1**
+Current version: **2.2.1**
 
 See [CHANGELOG.md](CHANGELOG.md) for details.
 

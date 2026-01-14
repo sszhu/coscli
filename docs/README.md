@@ -7,6 +7,7 @@ Welcome to the COS CLI documentation!
 ### Getting Started
 - **[Installation Guide](../README.md)** - Main installation instructions
 - **[Quick Reference](QUICK_REFERENCE.md)** - Common commands and examples
+- **[Transfer Tuning](../README.md#transfer-tuning)** - Performance and resilience flags
 - **[Implementation Complete](IMPLEMENTATION_COMPLETE.md)** - Project overview
 
 ### User Guides

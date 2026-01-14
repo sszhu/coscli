@@ -16,8 +16,10 @@ from ..exceptions import COSError
 @click.option("--include", multiple=True, help="Include files matching pattern")
 @click.option("--exclude", multiple=True, help="Exclude files matching pattern")
 @click.option("--dryrun", is_flag=True, help="Show what would be deleted")
+@click.option("--force", is_flag=True, help="Force deletion without prompts")
+@click.option("--no-progress", is_flag=True, help="Disable progress bar")
 @click.pass_context
-def rm(ctx, path, recursive, include, exclude, dryrun):
+def rm(ctx, path, recursive, include, exclude, dryrun, force, no_progress):
     """
     Remove objects from COS.
 
@@ -32,8 +34,9 @@ def rm(ctx, path, recursive, include, exclude, dryrun):
             raise COSError(f"Invalid COS URI: {path}")
         
         # Get config and auth
-        profile = ctx.obj.get("profile", "default")
-        region = ctx.obj.get("region")
+        ctx_obj = ctx.obj or {}
+        profile = ctx_obj.get("profile", "default")
+        region = ctx_obj.get("region")
         
         config_manager = ConfigManager(profile)
         authenticator = COSAuthenticator(config_manager)
@@ -47,6 +50,7 @@ def rm(ctx, path, recursive, include, exclude, dryrun):
             if dryrun:
                 click.echo(f"Would delete: cos://{bucket}/{key}")
             else:
+                # If force is False, we could prompt here; currently deletion is unconditional
                 cos_client.delete_object(key)
                 success_message(f"Deleted cos://{bucket}/{key}")
         else:

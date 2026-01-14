@@ -245,6 +245,30 @@ cos ls cos://bucket/ --output text
 --no-progress             # Disable progress bars
 ```
 
+## Transfer Tuning (Cheat Sheet)
+
+| Flag | Default | Applies To | Notes |
+|------|---------|------------|-------|
+| `--concurrency` | `4` | `cp -r` | Parallel workers for recursive transfers |
+| `--part-size` | `8MB` | `cp`, `mv` (local→COS), `sync` | Per-part size for multipart and ranged |
+| `--max-retries` | `3` | `cp`, `mv`, `sync` | Retries per part/range |
+| `--retry-backoff` | `0.5s` | `cp`, `mv`, `sync` | Initial backoff (exponential) |
+| `--retry-backoff-max` | `5.0s` | `cp`, `mv`, `sync` | Maximum backoff cap |
+| `--resume/--no-resume` | `--resume` | `cp`/`sync` downloads | Resume ranged downloads |
+
+Examples:
+
+```bash
+# Tune part size and retries for a large download
+cos cp cos://bucket/large.tar.gz ./ --part-size 64MB --max-retries 5 --retry-backoff 1.0 --retry-backoff-max 10.0
+
+# Local to COS move with larger parts
+cos mv ./big.bin cos://bucket/big.bin --part-size 64MB --max-retries 5
+
+# Sync with resumable ranged downloads
+cos sync cos://bucket/remote/ ./local/ --part-size 64MB --resume
+```
+
 ## Environment Variables
 
 ```bash

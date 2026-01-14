@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-01-14
+
+### Added
+- Transfer Tuning across commands:
+  - `--part-size` for multipart uploads and ranged downloads (human-friendly sizes)
+  - `--max-retries`, `--retry-backoff`, `--retry-backoff-max` for robust retry with exponential backoff
+  - Resumable ranged downloads for `cp` and `sync` (opt-out via `--no-resume`)
+  - `mv` (local→COS) now supports multipart with streaming progress when enabled
+- Documentation:
+  - New Transfer Tuning cheat sheet in README
+  - Examples for tuning in cp/mv/sync sections
+
+### Fixed
+- Prevent truncated downloads by fully consuming each HTTP range and advancing offsets by actual bytes read
+- Clear error when object does not exist before download (HEAD/List/range 0–0 fallback)
+
+### Changed
+- `sync` retains simple SDK paths under `--no-progress` to preserve script expectations; uses advanced streaming only when progress is enabled
+
 ## [2.2.0] - 2025-12-22
 
 ### Added

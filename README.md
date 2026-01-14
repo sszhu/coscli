@@ -1,8 +1,8 @@
 # Tencent COS CLI
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/version-2.2.0-blue.svg)](CHANGELOG.md)
-[![Tests](https://img.shields.io/badge/tests-196%20passing-success.svg)](tests/)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue.svg)](CHANGELOG.md)
+[![Tests](https://img.shields.io/badge/tests-202%20passing-success.svg)](tests/)
 
 A powerful command-line interface for Tencent Cloud Object Storage (COS), designed with a similar experience to AWS CLI.
 
@@ -174,6 +174,12 @@ cos cp cos://my-bucket/folder/ ./local-folder/ --recursive
 
 # Parallel download (8 workers) with aggregated progress
 cos cp cos://my-bucket/folder/ ./local-folder/ --recursive --concurrency 8
+
+# Use larger parts (64MB) and more retries for unstable networks
+cos cp cos://my-bucket/large.tar.gz ./ --part-size 64MB --max-retries 5 --retry-backoff 1.0 --retry-backoff-max 10.0
+
+# Disable resumption explicitly
+cos cp cos://my-bucket/large.tar.gz ./ --no-resume
 ```
 
 #### Copy Between Buckets
@@ -200,6 +206,9 @@ cos mv cos://bucket/old-folder/ cos://bucket/new-folder/ --recursive
 
 # Move between buckets
 cos mv cos://bucket1/file.txt cos://bucket2/file.txt
+
+# Use larger parts and retries for local->COS move
+cos mv ./bigfile.bin cos://bucket/bigfile.bin --part-size 64MB --max-retries 5 --retry-backoff 1.0 --retry-backoff-max 10.0
 ```
 
 #### Synchronize Directories
@@ -218,6 +227,9 @@ cos sync ./local-dir/ cos://bucket/remote-dir/ --dryrun
 
 # Fast sync (compare by size only)
 cos sync ./local-dir/ cos://bucket/remote-dir/ --size-only
+
+# Apply part-size and retry settings; use resumable ranged downloads
+cos sync cos://bucket/remote-dir/ ./local-dir/ --part-size 64MB --max-retries 5 --retry-backoff 1.0 --retry-backoff-max 10.0 --resume
 ```
 
 #### Generate Presigned URLs
@@ -309,6 +321,48 @@ cos cp large-file.iso cos://bucket/ --no-progress
 # Quiet mode
 cos cp file.txt cos://bucket/ --quiet
 ```
+
+## Transfer Tuning
+
+Tune performance and resilience of uploads/downloads across commands:
+
+- Cheat sheet
+
+| Flag | Applies To | Default | Notes |
+|------|------------|---------|-------|
+| `--concurrency` | `cp -r` | `4` | Parallel workers for recursive transfers |
+| `--part-size` | `cp`, `mv` (local→COS), `sync` | `8MB` | Per-part size for multipart uploads and ranged downloads |
+| `--max-retries` | `cp`, `mv` (local→COS), `sync` | `3` | Retries per part/range on transient errors |
+| `--retry-backoff` | `cp`, `mv`, `sync` | `0.5s` | Initial backoff (exponential) |
+| `--retry-backoff-max` | `cp`, `mv`, `sync` | `5.0s` | Max backoff cap |
+| `--resume/--no-resume` | `cp` downloads, `sync` downloads | `--resume` | Resume ranged downloads from partial files |
+| `--no-progress` | all | off in TTY | Auto-disabled in non‑TTY (e.g., CI) |
+
+- `--concurrency`: Parallel workers for recursive `cp` operations.
+- `--part-size`: Size of each part/chunk for multipart uploads and ranged downloads. Accepts `B`, `KB`, `MB`, `GB` (e.g., `8MB`, `64MB`). Default: `8MB`.
+- `--max-retries`: Max retries per part/range for network or transient errors. Default: `3`.
+- `--retry-backoff`: Initial backoff seconds between retries (exponential). Default: `0.5`.
+- `--retry-backoff-max`: Maximum backoff seconds cap. Default: `5.0`.
+- `--resume/--no-resume`: Enable resumable ranged downloads (continue from partial files). Default: enabled.
+- `--no-progress`: Disable progress bars. Progress is auto-disabled in non‑TTY (e.g., CI).
+
+Command-specific behavior
+
+- `cp`:
+  - Uploads: `--part-size`, retry/backoff apply to single-file uploads (multipart with progress). Recursive uploads use `--concurrency`.
+  - Downloads: uses ranged downloads with `--part-size`, retry/backoff, and `--resume` when progress is enabled or not explicitly disabled by non‑TTY.
+- `mv`:
+  - Local → COS: with progress enabled, uses multipart upload honoring `--part-size` and retry/backoff. With `--no-progress`, uses the simple SDK path (no multipart progress), keeping behavior consistent with scripts/tests.
+  - COS → COS: server-side copy; tuning flags don’t apply.
+- `sync`:
+  - Local → COS uploads: with progress enabled, multipart upload honors `--part-size` and retry/backoff; with `--no-progress`, uses simple upload.
+  - COS → Local downloads: with progress enabled, ranged download honors `--part-size`, retry/backoff, and `--resume`; with `--no-progress`, uses simple download.
+
+Tips
+
+- Larger `--part-size` reduces request overhead but increases memory per part and retry cost. Smaller parts increase concurrency headroom but add overhead.
+- Increase `--max-retries` and `--retry-backoff` on unstable networks.
+- Disable `--resume` to force fresh downloads when you don’t want to reuse partial files.
 
 ## Configuration
 
